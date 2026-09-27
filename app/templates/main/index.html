@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section">
+    <div class="hero-bg"></div>
+    <div class="container">
+        <div class="row align-items-center min-vh-100 py-5">
+            <div class="col-lg-6">
+                <div class="hero-badge mb-3">
+                    <i class="bi bi-shield-check me-1"></i>Trusted Warranty Management
+                </div>
+                <h1 class="hero-heading">Digital Warranty<br><span class="text-primary">Registration</span> &amp;<br>Claim Management</h1>
+                <p class="hero-subtext">
+                    Register your products, track warranties, submit claims, and monitor repairs — all in one seamless platform built for customers, dealers, and service teams.
+                </p>
+                <div class="d-flex flex-wrap gap-3 mt-4">
+                    <a href="{{ url_for('signup') }}" class="btn btn-primary btn-lg px-5">
+                        <i class="bi bi-rocket-takeoff me-2"></i>Get Started Free
+                    </a>
+                    <a href="{{ url_for('signup') }}" class="btn btn-outline-primary btn-lg px-5">
+                        <i class="bi bi-person-plus me-2"></i>Sign Up
+                    </a>
+                </div>
+                <div class="mt-4 d-flex gap-4 flex-wrap text-muted small">
+                    <span><i class="bi bi-check-circle-fill text-success me-1"></i>Free to register</span>
+                    <span><i class="bi bi-check-circle-fill text-success me-1"></i>Real-time tracking</span>
+                    <span><i class="bi bi-check-circle-fill text-success me-1"></i>Instant notifications</span>
+                </div>
+            </div>
+            <div class="col-lg-6 d-none d-lg-flex justify-content-center">
+                <div class="hero-illustration">
+                    <div class="floating-card card-1">
+                        <i class="bi bi-shield-fill-check text-success"></i>
+                        <span>Warranty Active</span>
+                    </div>
+                    <div class="floating-card card-2">
+                        <i class="bi bi-tools text-primary"></i>
+                        <span>In Repair</span>
+                    </div>
+                    <div class="floating-card card-3">
+                        <i class="bi bi-bell-fill text-warning"></i>
+                        <span>New Alert</span>
+                    </div>
+                    <div class="hero-circle">
+                        <i class="bi bi-shield-check"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Feature Cards -->
+<section class="py-5 bg-white" id="features">
+    <div class="container py-4">
+        <div class="text-center mb-5">
+            <h2 class="section-heading">Everything You Need</h2>
+            <p class="text-muted">A complete platform for warranty lifecycle management</p>
+        </div>
+        <div class="row g-4">
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-card">
+                    <div class="feature-icon" style="background:rgba(37,99,235,0.1);">
+                        <i class="bi bi-box-seam-fill text-primary"></i>
+                    </div>
+                    <h5>Register Products</h5>
+                    <p class="text-muted small">Quickly register any product with serial number verification and invoice upload.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-card">
+                    <div class="feature-icon" style="background:rgba(22,163,74,0.1);">
+                        <i class="bi bi-shield-fill-check text-success"></i>
+                    </div>
+                    <h5>Track Warranties</h5>
+                    <p class="text-muted small">Monitor warranty status, expiry dates, and get timely alerts before they expire.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-card">
+                    <div class="feature-icon" style="background:rgba(220,38,38,0.1);">
+                        <i class="bi bi-file-earmark-text-fill text-danger"></i>
+                    </div>
+                    <h5>Submit Claims</h5>
+                    <p class="text-muted small">File warranty claims with evidence uploads and track them through every stage.</p>
+                </div>
+            </div>
+            <div class="col-md-6 col-lg-3">
+                <div class="feature-card">
+                    <div class="feature-icon" style="background:rgba(217,119,6,0.1);">
+                        <i class="bi bi-tools text-warning"></i>
+                    </div>
+                    <h5>Monitor Repairs</h5>
+                    <p class="text-muted small">Stay informed as technicians inspect, repair, and resolve your product issues.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- How It Works -->
+<section class="py-5 bg-light" id="how-it-works">
+    <div class="container py-4">
+        <div class="text-center mb-5">
+            <h2 class="section-heading">How It Works</h2>
+            <p class="text-muted">From registration to resolution in 9 simple steps</p>
+        </div>
+        <div class="row g-4">
+            {% set steps = [
+                ('1', 'bi-person-plus-fill', 'text-primary', 'Create Your Account', 'Register as a customer or dealer in seconds.'),
+                ('2', 'bi-box-seam-fill', 'text-success', 'Register Your Product', 'Enter serial number, purchase date, and upload your invoice.'),
+                ('3', 'bi-shield-fill-check', 'text-info', 'Warranty Activated', 'Your warranty starts from purchase date automatically.'),
+                ('4', 'bi-bell-fill', 'text-warning', 'Get Expiry Alerts', 'Receive notifications 30 days before warranty expiry.'),
+                ('5', 'bi-file-earmark-plus-fill', 'text-danger', 'Submit a Claim', 'Describe the issue and upload supporting evidence.'),
+                ('6', 'bi-search', 'text-primary', 'Officer Reviews', 'Warranty officers review and approve or reject claims.'),
+                ('7', 'bi-person-fill-gear', 'text-success', 'Technician Assigned', 'Approved claims are assigned to a qualified technician.'),
+                ('8', 'bi-tools', 'text-warning', 'Inspection & Repair', 'Technician inspects, diagnoses, and repairs your product.'),
+                ('9', 'bi-check-circle-fill', 'text-success', 'Resolved & Closed', 'Product returned; claim closed with full service history.'),
+            ] %}
+            {% for num, icon, color, title, desc in steps %}
+            <div class="col-md-4">
+                <div class="step-card">
+                    <div class="step-number">{{ num }}</div>
+                    <div class="step-icon {{ color }}">
+                        <i class="bi {{ icon }}"></i>
+                    </div>
+                    <h6 class="fw-semibold">{{ title }}</h6>
+                    <p class="text-muted small mb-0">{{ desc }}</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="py-5 cta-section">
+    <div class="container text-center py-4">
+        <h2 class="text-white fw-bold mb-3">Ready to Get Started?</h2>
+        <p class="text-white opacity-75 mb-4">Join thousands of customers managing their warranties digitally.</p>
+        <a href="{{ url_for('auth.register') }}" class="btn btn-light btn-lg px-5">
+            <i class="bi bi-rocket-takeoff me-2"></i>Register Now — It's Free
+        </a>
+    </div>
+</section>
+{% endblock %}

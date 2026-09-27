@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header mb-4">
+    <div>
+        <h1 class="page-title">Assignment Detail: Claim #{{ assignment.claim.id }}</h1>
+        <p class="text-muted">Assigned on {{ assignment.assigned_at.strftime('%b %d, %Y at %I:%M %p') }}</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-header bg-white border-0">
+                <h5 class="card-title mb-0">Claim Information</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Customer:</strong> {{ assignment.claim.customer.full_name }}</p>
+                <p><strong>Product:</strong> {{ assignment.claim.warranty.registration.product_model.product.brand }} {{ assignment.claim.warranty.registration.product_model.model_name }}</p>
+                <p><strong>Serial Number:</strong> {{ assignment.claim.warranty.registration.serial_number }}</p>
+                <p><strong>Issue Description:</strong></p>
+                <div class="p-3 bg-light rounded">{{ assignment.claim.description }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 mb-4">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-header bg-white border-0">
+                <h5 class="card-title mb-0">Action Center</h5>
+            </div>
+            <div class="card-body">
+                {% if not assignment.inspection %}
+                <form method="POST" action="{{ url_for('admin.assignment_detail', assignment_id=assignment.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <div class="mb-3">
+                        <label class="form-label">Inspection Findings</label>
+                        <textarea class="form-control" name="findings" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Diagnosis</label>
+                        <input type="text" class="form-control" name="diagnosis" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Recommended Action</label>
+                        <input type="text" class="form-control" name="recommended_action" required>
+                    </div>
+                    <button class="btn btn-primary w-100" type="submit">Submit Inspection</button>
+                </form>
+                {% else %}
+                <div class="alert alert-success">
+                    Inspection completed! Diagnosis: {{ assignment.inspection.diagnosis }}
+                </div>
+                
+                <h6 class="mt-4">Update Repair</h6>
+                <form method="POST" action="{{ url_for('admin.update_repair', assignment_id=assignment.id) }}" class="mb-3">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <input type="hidden" name="action" value="add_part">
+                    <div class="row g-2 mb-2">
+                        <div class="col-6"><input type="text" name="part_name" class="form-control form-control-sm" placeholder="Part Name" required></div>
+                        <div class="col-6"><input type="text" name="part_number" class="form-control form-control-sm" placeholder="Part Number" required></div>
+                    </div>
+                    <div class="row g-2 mb-3">
+                        <div class="col-6"><input type="number" name="quantity" class="form-control form-control-sm" placeholder="Quantity" value="1" required></div>
+                        <div class="col-6"><input type="number" step="0.01" name="unit_cost" class="form-control form-control-sm" placeholder="Unit Cost" required></div>
+                    </div>
+                    <button class="btn btn-secondary btn-sm w-100" type="submit">Add Part</button>
+                </form>
+
+                <form method="POST" action="{{ url_for('admin.update_repair', assignment_id=assignment.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <input type="hidden" name="action" value="complete_repair">
+                    <input type="text" class="form-control form-control-sm mb-2" name="repair_notes" placeholder="Repair notes (optional)">
+                    <button class="btn btn-success w-100" type="submit">Mark Repair as Completed</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

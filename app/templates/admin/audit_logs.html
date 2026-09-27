@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">System Audit Logs</h1>
+        <p class="text-muted mb-0">Record of all critical system actions</p>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small fw-semibold">Action Type</label>
+                <select name="action" class="form-select form-select-sm">
+                    <option value="">All Actions</option>
+                    {% set actions = [
+                        'user_registered', 'user_login', 'warranty_registered', 
+                        'claim_submitted', 'claim_status_updated', 'technician_assigned',
+                        'product_added'
+                    ] %}
+                    {% for a in actions %}
+                    <option value="{{ a }}" {% if request.args.get('action') == a %}selected{% endif %}>{{ a }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label small fw-semibold">User Email</label>
+                <input type="text" name="user" class="form-control form-control-sm" placeholder="Search by email..." value="{{ request.args.get('user', '') }}">
+            </div>
+            <div class="col-md-2 d-grid">
+                <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 font-monospace small">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Timestamp</th>
+                        <th>User</th>
+                        <th>IP Address</th>
+                        <th>Action</th>
+                        <th>Details</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td>{{ log.id }}</td>
+                        <td class="text-muted">{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</td>
+                        <td>{{ log.user.email if log.user else 'SYSTEM' }}</td>
+                        <td>{{ log.ip_address }}</td>
+                        <td><span class="badge bg-light text-dark border">{{ log.action }}</span></td>
+                        <td>{{ log.details | string | truncate(50) }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center py-4">No logs found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if pagination.pages > 1 %}
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if pagination.has_prev %}
+        <li class="page-item"><a class="page-link" href="{{ url_for('admin.audit_logs', page=pagination.prev_num, action=request.args.get('action'), user=request.args.get('user')) }}">Previous</a></li>
+        {% endif %}
+        {% for p in pagination.iter_pages() %}
+        <li class="page-item {% if p == pagination.page %}active{% endif %}">
+            {% if p %}
+            <a class="page-link" href="{{ url_for('admin.audit_logs', page=p, action=request.args.get('action'), user=request.args.get('user')) }}">{{ p }}</a>
+            {% else %}
+            <span class="page-link">…</span>
+            {% endif %}
+        </li>
+        {% endfor %}
+        {% if pagination.has_next %}
+        <li class="page-item"><a class="page-link" href="{{ url_for('admin.audit_logs', page=pagination.next_num, action=request.args.get('action'), user=request.args.get('user')) }}">Next</a></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}

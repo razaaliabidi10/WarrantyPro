@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Back Button -->
+<div class="mb-3">
+    <a href="javascript:history.back()" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Back
+    </a>
+</div>
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Warranty Requests</h1>
+        <p class="text-muted mb-0">Review, approve or reject customer warranty claims</p>
+    </div>
+</div>
+
+<!-- Filter Tabs -->
+<ul class="nav nav-pills mb-4 gap-1">
+    {% for label, val in [('Pending', 'pending'), ('Approved', 'approved'), ('Rejected', 'rejected'), ('All', 'all')] %}
+    <li class="nav-item">
+        <a class="nav-link {% if status_filter == val %}active{% endif %}" href="?status={{ val }}">
+            {{ label }}
+            {% if val == 'pending' %}<span class="badge bg-warning text-dark ms-1">!</span>{% endif %}
+        </a>
+    </li>
+    {% endfor %}
+</ul>
+
+<!-- Search -->
+<div class="mb-3">
+    <form method="get" class="input-group" style="max-width:380px;">
+        <input type="hidden" name="status" value="{{ status_filter }}">
+        <input type="text" name="search" class="form-control" placeholder="Search by customer name..."
+               value="{{ search }}">
+        <button class="btn btn-primary" type="submit"><i class="bi bi-search"></i></button>
+        {% if search %}<a href="?status={{ status_filter }}" class="btn btn-outline-secondary">Clear</a>{% endif %}
+    </form>
+</div>
+
+{% if claims %}
+<div class="row g-3">
+    {% for claim in claims %}
+    {% set label, color = claim.status_label %}
+    <div class="col-md-6 col-xl-4">
+        <div class="card border-0 shadow-sm h-100 warranty-card">
+            <div class="card-body">
+                <div class="d-flex align-items-start justify-content-between mb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="avatar-circle" style="width:38px;height:38px;font-size:1rem;background:linear-gradient(135deg,#6366f1,#8b5cf6);">
+                            {{ claim.customer.full_name[0].upper() }}
+                        </div>
+                        <div>
+                            <div class="fw-semibold">{{ claim.customer.full_name }}</div>
+                            <div class="text-muted small">Claim #{{ claim.id }}</div>
+                        </div>
+                    </div>
+                    <span class="badge bg-{{ color }}">{{ label }}</span>
+                </div>
+
+                <div class="small text-muted mb-3">
+                    <div><i class="bi bi-box-seam me-1"></i>
+                        {{ claim.warranty.registration.product_model.product.brand }}
+                        {{ claim.warranty.registration.product_model.model_name }}
+                    </div>
+                    <div><i class="bi bi-tag me-1"></i>{{ claim.claim_type | replace('_', ' ') | title }}</div>
+                    <div><i class="bi bi-clock me-1"></i>{{ claim.submitted_at.strftime('%b %d, %Y at %I:%M %p') }}</div>
+                    {% if claim.documents.count() > 0 %}
+                    <div class="mt-1"><i class="bi bi-paperclip me-1 text-primary"></i>
+                        <span class="text-primary">{{ claim.documents.count() }} attachment(s)</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <p class="small text-muted mb-3 text-truncate">{{ claim.description }}</p>
+
+                <a href="{{ url_for('officer.request_detail', claim_id=claim.id) }}"
+                   class="btn btn-sm btn-primary w-100">
+                    <i class="bi bi-eye me-1"></i>Review Request
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if pagination.pages > 1 %}
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if pagination.has_prev %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ pagination.prev_num }}&status={{ status_filter }}&search={{ search }}">Previous</a>
+        </li>
+        {% endif %}
+        {% for p in pagination.iter_pages() %}
+        <li class="page-item {% if p == pagination.page %}active{% endif %}">
+            {% if p %}
+            <a class="page-link" href="?page={{ p }}&status={{ status_filter }}&search={{ search }}">{{ p }}</a>
+            {% else %}
+            <span class="page-link">…</span>
+            {% endif %}
+        </li>
+        {% endfor %}
+        {% if pagination.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ pagination.next_num }}&status={{ status_filter }}&search={{ search }}">Next</a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+    <i class="bi bi-inbox"></i>
+    <h5>No requests found</h5>
+    <p class="text-muted">{{ 'No pending requests to review.' if status_filter == 'pending' else 'No requests match your filter.' }}</p>
+</div>
+{% endif %}
+{% endblock %}

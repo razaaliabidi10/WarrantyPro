@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">
+            <i class="bi bi-tools me-2 text-primary"></i>Technician Dashboard
+        </h1>
+        <p class="text-muted mb-0">
+            Welcome, <strong>{% if current_user.technician_profile %}{{ current_user.technician_profile.full_name }}{% else %}{{ current_user.full_name or current_user.email }}{% endif %}</strong>
+        </p>
+    </div>
+    <a href="{{ url_for('main.profile') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-person-circle me-1"></i>My Profile
+    </a>
+</div>
+
+<!-- Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-sm-4">
+        <div class="card border-0 shadow-sm kpi-card h-100" style="border-left:4px solid #f59e0b!important;">
+            <div class="card-body text-center">
+                <div class="kpi-icon" style="background:rgba(245,158,11,0.15);color:#f59e0b;">
+                    <i class="bi bi-list-task"></i>
+                </div>
+                <div class="kpi-number">{{ in_progress }}</div>
+                <div class="kpi-label">Active Jobs</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-4">
+        <div class="card border-0 shadow-sm kpi-card h-100" style="border-left:4px solid #22c55e!important;">
+            <div class="card-body text-center">
+                <div class="kpi-icon" style="background:rgba(34,197,94,0.15);color:#22c55e;">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+                <div class="kpi-number">{{ completed_month }}</div>
+                <div class="kpi-label">Completed (This Month)</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-4">
+        <div class="card border-0 shadow-sm kpi-card h-100" style="border-left:4px solid #6366f1!important;">
+            <div class="card-body text-center">
+                <div class="kpi-icon" style="background:rgba(99,102,241,0.15);color:#6366f1;">
+                    <i class="bi bi-star-fill"></i>
+                </div>
+                <div class="kpi-number">{{ total_assigned }}</div>
+                <div class="kpi-label">Total Assignments</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assignments -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-transparent border-0 pt-3">
+        <h5 class="fw-semibold mb-0"><i class="bi bi-wrench-adjustable me-2 text-primary"></i>My Assignments</h5>
+    </div>
+    <div class="card-body p-0">
+        {% if assignments %}
+        <div class="row g-0">
+            {% for assignment in assignments %}
+            {% set claim = assignment.claim %}
+            {% set label, color = claim.status_label %}
+            <div class="col-12 border-bottom p-4">
+                <div class="row align-items-start g-3">
+                    <div class="col-md-5">
+                        <div class="fw-bold mb-1">
+                            <i class="bi bi-shield-fill-check me-1 text-primary"></i>
+                            Claim #{{ claim.id }}
+                        </div>
+                        <div class="fw-semibold">
+                            {{ claim.warranty.registration.product_model.product.brand }}
+                            {{ claim.warranty.registration.product_model.model_name }}
+                        </div>
+                        <div class="text-muted small font-monospace">SN: {{ claim.warranty.registration.serial_number }}</div>
+                        <div class="text-muted small">Customer: {{ claim.customer.full_name }}</div>
+                        <div class="text-muted small">
+                            Assigned: {{ assignment.assigned_at.strftime('%b %d, %Y') }}
+                            {% if assignment.due_date %}
+                            · Due: <strong class="{% if assignment.due_date < now().date() %}text-danger{% else %}text-dark{% endif %}">
+                                {{ assignment.due_date.strftime('%b %d, %Y') }}
+                            </strong>
+                            {% endif %}
+                        </div>
+                        {% if assignment.notes %}
+                        <div class="small mt-1 p-2 rounded" style="background:#f0f4ff;">
+                            <i class="bi bi-info-circle me-1 text-primary"></i>
+                            <em>{{ assignment.notes }}</em>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-3">
+                        <div class="small text-muted mb-1">Claim Status</div>
+                        <span class="badge bg-{{ color }} mb-2">{{ label }}</span>
+                        <div class="small text-muted mb-1">Work Status</div>
+                        <span class="badge bg-{{ 'success' if assignment.status == 'completed' else ('warning text-dark' if assignment.status == 'in_progress' else 'secondary') }}">
+                            {{ assignment.status | title }}
+                        </span>
+                        {% if assignment.technician_notes %}
+                        <div class="small text-muted mt-2">
+                            <i class="bi bi-chat-square-text me-1"></i>
+                            {{ assignment.technician_notes | truncate(60) }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-4">
+                        {% if assignment.status == 'pending' %}
+                        <!-- Start Work -->
+                        <button class="btn btn-warning w-100 mb-2" data-bs-toggle="modal"
+                                data-bs-target="#startModal{{ assignment.id }}">
+                            <i class="bi bi-play-fill me-1"></i>Start Work
+                        </button>
+                        {% elif assignment.status == 'in_progress' %}
+                        <!-- Complete Work -->
+                        <button class="btn btn-success w-100 mb-2" data-bs-toggle="modal"
+                                data-bs-target="#completeModal{{ assignment.id }}">
+                            <i class="bi bi-check-lg me-1"></i>Mark Complete
+                        </button>
+                        <div class="text-muted small text-center">
+                            Started: {{ assignment.started_at.strftime('%b %d, %Y at %I:%M %p') if assignment.started_at else 'N/A' }}
+                        </div>
+                        {% else %}
+                        <div class="text-center py-2">
+                            <i class="bi bi-check-circle-fill text-success fs-3 d-block mb-1"></i>
+                            <div class="small text-muted">Completed
+                                {% if assignment.completed_at %}{{ assignment.completed_at.strftime('%b %d, %Y') }}{% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+                        <a href="{{ url_for('admin.assignment_detail', assignment_id=assignment.id) }}"
+                           class="btn btn-outline-secondary btn-sm w-100">
+                            <i class="bi bi-eye me-1"></i>View Full Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Start Work Modal -->
+            {% if assignment.status == 'pending' %}
+            <div class="modal fade" id="startModal{{ assignment.id }}" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content border-0 shadow">
+                        <div class="modal-header border-0">
+                            <h5 class="modal-title fw-bold"><i class="bi bi-play-fill me-2 text-warning"></i>Start Work — Claim #{{ claim.id }}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <form method="post" action="{{ url_for('admin.update_assignment_status', assignment_id=assignment.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="action" value="start">
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Initial Notes (optional)</label>
+                                    <textarea name="technician_notes" class="form-control" rows="3"
+                                              placeholder="What issues did you find? Initial diagnosis..."></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer border-0">
+                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-warning">
+                                    <i class="bi bi-play-fill me-1"></i>Start Work
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Complete Work Modal -->
+            {% if assignment.status == 'in_progress' %}
+            <div class="modal fade" id="completeModal{{ assignment.id }}" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content border-0 shadow">
+                        <div class="modal-header border-0">
+                            <h5 class="modal-title fw-bold"><i class="bi bi-check-circle-fill me-2 text-success"></i>Complete Work — Claim #{{ claim.id }}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <form method="post" action="{{ url_for('admin.update_assignment_status', assignment_id=assignment.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <input type="hidden" name="action" value="complete">
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Completion Notes</label>
+                                    <textarea name="technician_notes" class="form-control" rows="4"
+                                              placeholder="What was done? Parts replaced? Final diagnosis..."></textarea>
+                                </div>
+                                <div class="alert alert-success border-0 py-2">
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    The officer and admin will be notified once you mark this complete.
+                                </div>
+                            </div>
+                            <div class="modal-footer border-0">
+                                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                                <button type="submit" class="btn btn-success">
+                                    <i class="bi bi-check-lg me-1"></i>Mark Complete
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+            <p class="mb-0">No assignments yet. You'll see them here once an officer assigns you a claim.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Inject current datetime for due date comparison
+function now() { return new Date(); }
+</script>
+{% endblock %}

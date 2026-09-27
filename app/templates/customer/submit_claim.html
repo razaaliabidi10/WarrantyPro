@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('warranty.warranty_detail', warranty_id=warranty.id) }}">Warranty #{{ warranty.id }}</a></li>
+        <li class="breadcrumb-item active">Submit Claim</li>
+    </ol>
+</nav>
+
+<div class="page-header mb-4">
+    <div>
+        <h1 class="page-title">Submit a Warranty Claim</h1>
+        <p class="text-muted mb-0">Describe the issue with your product</p>
+    </div>
+</div>
+
+<!-- Warranty Summary -->
+<div class="alert alert-info d-flex align-items-start gap-3 mb-4 border-0">
+    <i class="bi bi-shield-fill-check fs-3 flex-shrink-0 mt-1"></i>
+    <div>
+        <strong>{{ warranty.registration.product_model.product.brand }} {{ warranty.registration.product_model.model_name }}</strong><br>
+        <small class="text-muted">SN: {{ warranty.registration.serial_number }} &bull; Warranty expires: <strong>{{ warranty.end_date.strftime('%B %d, %Y') }}</strong> ({{ warranty.days_remaining }} days remaining)</small>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('warranty.submit_claim', warranty_id=warranty.id) }}"
+                      enctype="multipart/form-data" novalidate id="claimForm">
+                    {{ form.hidden_tag() }}
+                    {{ form.warranty_id(value=warranty.id) }}
+
+                    <!-- Claim Type Cards -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold fs-6">Select Claim Type</label>
+                        <div class="row g-3">
+                            {% set types = [
+                                ('hardware_defect', 'bi-cpu-fill', 'text-primary', 'Hardware Defect', 'Physical component failure, screen issues, battery problems'),
+                                ('physical_damage', 'bi-shield-slash-fill', 'text-danger', 'Physical Damage', 'Accidental drops, water damage, cracks'),
+                                ('software_issue', 'bi-bug-fill', 'text-warning', 'Software Issue', 'App crashes, OS errors, firmware problems'),
+                                ('other', 'bi-three-dots', 'text-secondary', 'Other Issue', 'Any other warranty-related issue'),
+                            ] %}
+                            {% for value, icon, color, label, desc in types %}
+                            <div class="col-sm-6">
+                                <input type="radio" name="claim_type" id="type_{{ value }}" value="{{ value }}"
+                                       class="claim-type-radio d-none"
+                                       {% if loop.first %}checked{% endif %}>
+                                <label for="type_{{ value }}" class="claim-type-card h-100">
+                                    <i class="bi {{ icon }} fs-3 {{ color }} mb-2 d-block"></i>
+                                    <div class="fw-semibold">{{ label }}</div>
+                                    <div class="small text-muted">{{ desc }}</div>
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% for error in form.claim_type.errors %}
+                        <div class="text-danger small mt-1">{{ error }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Description -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Describe the Issue</label>
+                        {{ form.description(class="form-control" + (" is-invalid" if form.description.errors else ""),
+                           id="descriptionField", rows=5,
+                           placeholder="Please describe the problem in detail. Include when it started, error messages, and anything relevant...") }}
+                        {% for error in form.description.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                        <div class="d-flex justify-content-between mt-1">
+                            <div class="form-text">Minimum 20 characters required.</div>
+                            <div class="form-text char-counter" id="charCounter">0 / 500</div>
+                        </div>
+                    </div>
+
+                    <!-- File Upload -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Upload Evidence <span class="text-muted fw-normal">(optional)</span></label>
+                        <div class="upload-zone" id="multiUploadZone">
+                            <i class="bi bi-images fs-1 text-primary mb-2 d-block"></i>
+                            <p class="fw-semibold mb-1">Drag &amp; drop photos or documents</p>
+                            <p class="text-muted small mb-3">Multiple files allowed</p>
+                            {{ form.attachments(class="d-none", id="attachmentsInput", multiple=True, accept=".pdf,.png,.jpg,.jpeg") }}
+                            <label for="attachmentsInput" class="btn btn-outline-primary btn-sm">Choose Files</label>
+                            <div id="fileListPreview" class="mt-3"></div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-3">
+                        <a href="{{ url_for('warranty.warranty_detail', warranty_id=warranty.id) }}"
+                           class="btn btn-outline-secondary px-4">Cancel</a>
+                        <button type="button" class="btn btn-primary px-5" id="submitClaimBtn"
+                                data-bs-toggle="modal" data-bs-target="#confirmModal">
+                            <i class="bi bi-send me-2"></i>Submit Claim
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold" id="confirmModalLabel">Confirm Claim Submission</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-muted">
+                Are you sure you want to submit this claim? Our team will review it and contact you within 1–2 business days.
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmSubmitBtn">
+                    <i class="bi bi-send me-1"></i>Yes, Submit Claim
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Character counter
+const desc = document.getElementById('descriptionField');
+const counter = document.getElementById('charCounter');
+if (desc && counter) {
+    desc.addEventListener('input', () => {
+        const len = desc.value.length;
+        counter.textContent = len + ' / 500';
+        counter.classList.toggle('text-danger', len < 20);
+        counter.classList.toggle('text-success', len >= 20);
+    });
+}
+
+// Confirm modal submit
+document.getElementById('confirmSubmitBtn').addEventListener('click', () => {
+    document.getElementById('claimForm').submit();
+});
+
+// Multi-file preview
+const multiInput = document.getElementById('attachmentsInput');
+const fileList = document.getElementById('fileListPreview');
+const zone = document.getElementById('multiUploadZone');
+
+function updateFileList(files) {
+    fileList.innerHTML = '';
+    for (const f of files) {
+        const el = document.createElement('div');
+        el.className = 'badge bg-light text-dark me-1 mb-1 fw-normal';
+        el.innerHTML = '<i class="bi bi-paperclip me-1"></i>' + f.name;
+        fileList.appendChild(el);
+    }
+}
+
+multiInput.addEventListener('change', () => updateFileList(multiInput.files));
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    const dt = new DataTransfer();
+    for (const f of e.dataTransfer.files) dt.items.add(f);
+    multiInput.files = dt.files;
+    updateFileList(dt.files);
+});
+
+// Claim type cards
+document.querySelectorAll('.claim-type-card').forEach(card => {
+    card.addEventListener('click', () => {
+        document.querySelectorAll('.claim-type-card').forEach(c => c.classList.remove('selected'));
+        card.classList.add('selected');
+    });
+});
+// Initialize first card as selected
+document.querySelector('.claim-type-card')?.classList.add('selected');
+</script>
+{% endblock %}

@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('warranty.warranties') }}">My Warranties</a></li>
+        <li class="breadcrumb-item active">Register New Product</li>
+    </ol>
+</nav>
+
+<div class="page-header mb-4">
+    <div>
+        <h1 class="page-title">Register a Product</h1>
+        <p class="text-muted mb-0">Add your product to activate warranty coverage</p>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('warranty.register_product') }}" enctype="multipart/form-data" novalidate>
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">{{ form.product_model_id.label.text }}</label>
+                        {{ form.product_model_id(class="form-select form-select-lg" + (" is-invalid" if form.product_model_id.errors else ""),
+                           id="product_model_id") }}
+                        {% for error in form.product_model_id.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                        <div class="form-text">Select your product model from the list. If not listed, contact support.</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">{{ form.serial_number.label.text }}</label>
+                        {{ form.serial_number(class="form-control form-control-lg" + (" is-invalid" if form.serial_number.errors else ""),
+                           id="serial_number", placeholder="e.g. SN123456789") }}
+                        {% for error in form.serial_number.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                        <div class="form-text">Found on the product label or box.</div>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold">{{ form.purchase_date.label.text }}</label>
+                            {{ form.purchase_date(class="form-control form-control-lg" + (" is-invalid" if form.purchase_date.errors else ""),
+                               id="purchase_date") }}
+                            {% for error in form.purchase_date.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold">{{ form.retailer_name.label.text }}</label>
+                            {{ form.retailer_name(class="form-control form-control-lg",
+                               id="retailer_name", placeholder="Store / retailer name") }}
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">{{ form.notes.label.text }} <span class="text-muted fw-normal">(optional)</span></label>
+                        {{ form.notes(class="form-control", id="notes", rows=3, placeholder="Any additional notes about your purchase...") }}
+                    </div>
+
+                    <!-- File Upload Zone -->
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">{{ form.invoice_file.label.text }}</label>
+                        <div class="upload-zone" id="uploadZone">
+                            <i class="bi bi-cloud-upload fs-1 text-primary mb-2 d-block"></i>
+                            <p class="mb-1 fw-semibold">Drag &amp; drop your invoice here</p>
+                            <p class="text-muted small mb-3">or click to browse files</p>
+                            {{ form.invoice_file(class="d-none", id="invoiceFile", accept=".pdf,.png,.jpg,.jpeg") }}
+                            <label for="invoiceFile" class="btn btn-outline-primary btn-sm">Browse Files</label>
+                            <div id="uploadedFileName" class="mt-2 text-success small"></div>
+                        </div>
+                        {% for error in form.invoice_file.errors %}
+                            <div class="text-danger small mt-1">{{ error }}</div>
+                        {% endfor %}
+                        <div class="form-text">Accepted: PDF, PNG, JPG, JPEG — Max 16MB</div>
+                    </div>
+
+                    <div class="d-flex gap-3">
+                        <a href="{{ url_for('warranty.warranties') }}" class="btn btn-outline-secondary px-4">Cancel</a>
+                        <button type="submit" class="btn btn-primary px-5">
+                            <i class="bi bi-shield-check me-2"></i>Register &amp; Activate Warranty
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Upload zone interaction
+const zone = document.getElementById('uploadZone');
+const input = document.getElementById('invoiceFile');
+const fileLabel = document.getElementById('uploadedFileName');
+
+zone.addEventListener('click', (e) => {
+    if (e.target !== input && !e.target.closest('label[for="invoiceFile"]')) {
+        input.click();
+    }
+});
+
+input.addEventListener('change', function() {
+    if (this.files[0]) {
+        fileLabel.innerHTML = '<i class="bi bi-check-circle-fill text-success me-1"></i>' + this.files[0].name;
+        zone.classList.add('upload-zone-filled');
+    }
+});
+
+zone.addEventListener('dragover', (e) => { e.preventDefault(); zone.classList.add('dragover'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+zone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) {
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        input.files = dt.files;
+        fileLabel.innerHTML = '<i class="bi bi-check-circle-fill text-success me-1"></i>' + file.name;
+        zone.classList.add('upload-zone-filled');
+    }
+});
+</script>
+{% endblock %}

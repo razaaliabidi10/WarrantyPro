@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Digital Warranty Registration and Claim Management System — manage your product warranties with ease.">
+    <title>{% block title %}{{ title or 'WarrantyPro' }}{% endblock %} | WarrantyPro</title>
+
+    <!-- Bootstrap 5.3 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <!-- Google Fonts: Inter + Poppins -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/custom.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+
+<!-- ─────────── TOP NAVBAR ─────────── -->
+<nav class="navbar navbar-expand-lg navbar-light fixed-top" id="mainNavbar">
+    <div class="container-fluid px-4">
+        <!-- Brand -->
+        <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('main.index') }}">
+            <div class="brand-icon">
+                <i class="bi bi-shield-check"></i>
+            </div>
+            <span class="brand-text">WarrantyPro</span>
+        </a>
+
+        <button class="navbar-toggler border-0" type="button" data-bs-toggle="offcanvas"
+                data-bs-target="#sidebarOffcanvas" aria-controls="sidebarOffcanvas">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse">
+            <ul class="navbar-nav ms-auto align-items-center gap-2">
+                {% if current_user.is_authenticated %}
+                <!-- Notification Bell -->
+                <li class="nav-item">
+                    {% if current_user.is_warranty_officer() %}
+                    <a class="nav-link position-relative notification-bell" href="{{ url_for('officer.notifications') }}" id="navNotifBell">
+                    {% elif current_user.is_admin() %}
+                    <a class="nav-link position-relative notification-bell" href="{{ url_for('admin.notifications') }}" id="navNotifBell">
+                    {% else %}
+                    <a class="nav-link position-relative notification-bell" href="{{ url_for('warranty.notifications') }}" id="navNotifBell">
+                    {% endif %}
+                        <i class="bi bi-bell-fill fs-5"></i>
+                        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-2 border-white rounded-circle notif-dot" id="notifDot" style="display:none;"></span>
+                        <span class="badge bg-danger position-absolute top-0 start-100 translate-middle rounded-pill" id="notifBadge" style="display:none;font-size:0.65rem;">0</span>
+                    </a>
+                </li>
+                <!-- User Dropdown -->
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle d-flex align-items-center gap-2 user-pill" href="#"
+                       id="userDropdown" role="button" data-bs-toggle="dropdown">
+                        {% if current_user.profile_photo %}
+                        <img src="/uploads/{{ current_user.profile_photo }}" class="rounded-circle"
+                             style="width:32px;height:32px;object-fit:cover;" alt="avatar">
+                        {% else %}
+                        <div class="avatar-circle">
+                            {{ (current_user.full_name or current_user.email)[0].upper() }}
+                        </div>
+                        {% endif %}
+                        <span class="d-none d-md-inline small fw-semibold">{{ current_user.full_name or current_user.email }}</span>
+                        <span class="badge role-badge ms-1">{{ current_user.role.name | replace('_', ' ') | title }}</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                        <li><h6 class="dropdown-header">{{ current_user.email }}</h6></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <!-- Profile Link -->
+                        {% if current_user.is_admin() %}
+                        <li><a class="dropdown-item" href="{{ url_for('admin.profile') }}"><i class="bi bi-person-circle me-2"></i>My Profile</a></li>
+                        {% elif current_user.is_warranty_officer() %}
+                        <li><a class="dropdown-item" href="{{ url_for('officer.profile') }}"><i class="bi bi-person-circle me-2"></i>My Profile</a></li>
+                        {% else %}
+                        <li><a class="dropdown-item" href="{{ url_for('main.profile') }}"><i class="bi bi-person-circle me-2"></i>My Profile</a></li>
+                        {% endif %}
+                        <!-- Notifications -->
+                        {% if current_user.is_admin() %}
+                        <li><a class="dropdown-item" href="{{ url_for('admin.notifications') }}"><i class="bi bi-bell me-2"></i>Activity Feed</a></li>
+                        {% elif current_user.is_warranty_officer() %}
+                        <li><a class="dropdown-item" href="{{ url_for('officer.notifications') }}"><i class="bi bi-bell me-2"></i>Notifications</a></li>
+                        {% else %}
+                        <li><a class="dropdown-item" href="{{ url_for('warranty.notifications') }}"><i class="bi bi-bell me-2"></i>Notifications</a></li>
+                        {% endif %}
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form method="post" action="{{ url_for('auth.logout') }}" class="d-inline" id="navLogoutForm">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="dropdown-item text-danger border-0 bg-transparent w-100 text-start">
+                                    <i class="bi bi-box-arrow-right me-2"></i>Log Out
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </li>
+                {% else %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('signup') }}">Sign Up</a>
+                </li>
+                <li class="nav-item">
+                    <a class="btn btn-primary btn-sm px-3 text-white" href="{{ url_for('login') }}">Login</a>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>
+
+{% if current_user.is_authenticated %}
+<!-- ─────────── SIDEBAR (Desktop sticky) ─────────── -->
+<aside class="sidebar d-none d-lg-flex flex-column" id="desktopSidebar">
+    <div class="sidebar-header">
+        <div class="sidebar-brand">
+            <i class="bi bi-shield-check"></i>
+            <span>WarrantyPro</span>
+        </div>
+        <div class="sidebar-user">
+            {% if current_user.profile_photo %}
+            <img src="/uploads/{{ current_user.profile_photo }}"
+                 class="rounded-circle flex-shrink-0"
+                 style="width:40px;height:40px;object-fit:cover;border:2px solid #334155;"
+                 alt="avatar">
+            {% else %}
+            <div class="avatar-sm">{{ (current_user.full_name or current_user.email)[0].upper() }}</div>
+            {% endif %}
+            <div class="sidebar-user-info">
+                <div class="sidebar-user-email">{{ (current_user.full_name or current_user.email) | truncate(22, True) }}</div>
+                <div class="sidebar-user-role">{{ current_user.role.name | replace('_', ' ') | title }}</div>
+            </div>
+        </div>
+    </div>
+    <nav class="sidebar-nav flex-grow-1">
+        {% if current_user.is_customer() or current_user.is_dealer() %}
+            <div class="sidebar-section-label">Customer</div>
+            <a href="{{ url_for('warranty.dashboard') }}" class="sidebar-link {% if request.endpoint == 'warranty.dashboard' %}active{% endif %}">
+                <i class="bi bi-grid-1x2-fill"></i> Dashboard
+            </a>
+            <a href="{{ url_for('warranty.warranties') }}" class="sidebar-link {% if request.endpoint and 'warranties' in request.endpoint %}active{% endif %}">
+                <i class="bi bi-shield-fill-check"></i> My Warranties
+            </a>
+            <a href="{{ url_for('warranty.register_product') }}" class="sidebar-link {% if request.endpoint == 'warranty.register_product' %}active{% endif %}">
+                <i class="bi bi-plus-circle-fill"></i> Register Product
+            </a>
+            <a href="{{ url_for('warranty.claims') }}" class="sidebar-link {% if request.endpoint == 'warranty.claims' %}active{% endif %}">
+                <i class="bi bi-file-earmark-text-fill"></i> My Claims
+            </a>
+            <a href="{{ url_for('warranty.notifications') }}" class="sidebar-link position-relative {% if request.endpoint == 'warranty.notifications' %}active{% endif %}" id="sidebarNotifLink">
+                <i class="bi bi-bell-fill"></i> Notifications
+                <span class="position-absolute top-50 end-0 translate-middle-y me-2 p-1 bg-danger border border-2 border-white rounded-circle sidebar-notif-dot" style="display:none;"></span>
+            </a>
+            <a href="{{ url_for('main.profile') }}" class="sidebar-link {% if request.endpoint == 'main.profile' %}active{% endif %}">
+                <i class="bi bi-person-circle"></i> My Profile
+            </a>
+        {% elif current_user.is_warranty_officer() %}
+            <div class="sidebar-section-label">Officer Panel</div>
+            <a href="{{ url_for('officer.dashboard') }}" class="sidebar-link {% if request.endpoint == 'officer.dashboard' %}active{% endif %}">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+            <a href="{{ url_for('officer.requests') }}" class="sidebar-link {% if request.endpoint and 'officer.request' in request.endpoint %}active{% endif %}">
+                <i class="bi bi-inbox-fill"></i> Requests Queue
+            </a>
+            <a href="{{ url_for('officer.notifications') }}" class="sidebar-link position-relative {% if request.endpoint == 'officer.notifications' %}active{% endif %}" id="sidebarNotifLink">
+                <i class="bi bi-bell-fill"></i> Notifications
+                <span class="position-absolute top-50 end-0 translate-middle-y me-2 p-1 bg-danger border border-2 border-white rounded-circle sidebar-notif-dot" style="display:none;"></span>
+            </a>
+            <div class="sidebar-section-label">Technician Management</div>
+            <a href="{{ url_for('officer.technicians') }}" class="sidebar-link {% if request.endpoint == 'officer.technicians' %}active{% endif %}">
+                <i class="bi bi-person-fill-gear"></i> Technicians
+            </a>
+            <a href="{{ url_for('officer.add_technician') }}" class="sidebar-link {% if request.endpoint == 'officer.add_technician' %}active{% endif %}">
+                <i class="bi bi-person-plus-fill"></i> Add Technician
+            </a>
+            <a href="{{ url_for('officer.profile') }}" class="sidebar-link {% if request.endpoint == 'officer.profile' %}active{% endif %}">
+                <i class="bi bi-person-circle"></i> My Profile
+            </a>
+        {% elif current_user.is_admin() %}
+            <div class="sidebar-section-label">Management</div>
+            <a href="{{ url_for('admin.dashboard') }}" class="sidebar-link {% if request.endpoint == 'admin.dashboard' %}active{% endif %}">
+                <i class="bi bi-speedometer2"></i> Dashboard
+            </a>
+            <a href="{{ url_for('admin.claims') }}" class="sidebar-link {% if request.endpoint == 'admin.claims' %}active{% endif %}">
+                <i class="bi bi-file-earmark-text-fill"></i> All Claims
+            </a>
+            <a href="{{ url_for('admin.warranties') }}" class="sidebar-link {% if request.endpoint == 'admin.warranties' %}active{% endif %}">
+                <i class="bi bi-shield-fill-check"></i> All Warranties
+            </a>
+            <div class="sidebar-section-label">Administration</div>
+            <a href="{{ url_for('admin.products') }}" class="sidebar-link {% if request.endpoint and 'product' in request.endpoint %}active{% endif %}">
+                <i class="bi bi-box-seam-fill"></i> Products
+            </a>
+            <a href="{{ url_for('admin.service_centers') }}" class="sidebar-link {% if request.endpoint == 'admin.service_centers' %}active{% endif %}">
+                <i class="bi bi-building-fill"></i> Service Centers
+            </a>
+            <a href="{{ url_for('admin.technicians') }}" class="sidebar-link {% if request.endpoint == 'admin.technicians' %}active{% endif %}">
+                <i class="bi bi-person-fill-gear"></i> Technicians
+            </a>
+            <a href="{{ url_for('admin.users') }}" class="sidebar-link {% if request.endpoint == 'admin.users' %}active{% endif %}">
+                <i class="bi bi-people-fill"></i> Users
+            </a>
+            <a href="{{ url_for('admin.reports') }}" class="sidebar-link {% if request.endpoint == 'admin.reports' %}active{% endif %}">
+                <i class="bi bi-bar-chart-fill"></i> Reports
+            </a>
+            <a href="{{ url_for('admin.notifications') }}" class="sidebar-link position-relative {% if request.endpoint == 'admin.notifications' %}active{% endif %}" id="sidebarNotifLink">
+                <i class="bi bi-activity"></i> Activity Feed
+                <span class="position-absolute top-50 end-0 translate-middle-y me-2 p-1 bg-danger border border-2 border-white rounded-circle sidebar-notif-dot" style="display:none;"></span>
+            </a>
+            <a href="{{ url_for('admin.audit_logs') }}" class="sidebar-link {% if request.endpoint == 'admin.audit_logs' %}active{% endif %}">
+                <i class="bi bi-clock-history"></i> Audit Logs
+            </a>
+            <a href="{{ url_for('admin.profile') }}" class="sidebar-link {% if request.endpoint == 'admin.profile' %}active{% endif %}">
+                <i class="bi bi-person-circle"></i> My Profile
+            </a>
+        {% elif current_user.is_technician() %}
+            <div class="sidebar-section-label">Technician</div>
+            <a href="{{ url_for('admin.technician_dashboard') }}" class="sidebar-link {% if request.endpoint == 'admin.technician_dashboard' %}active{% endif %}">
+                <i class="bi bi-grid-1x2-fill"></i> My Dashboard
+            </a>
+            <a href="{{ url_for('warranty.notifications') }}" class="sidebar-link position-relative {% if request.endpoint == 'warranty.notifications' %}active{% endif %}" id="sidebarNotifLink">
+                <i class="bi bi-bell-fill"></i> Notifications
+                <span class="position-absolute top-50 end-0 translate-middle-y me-2 p-1 bg-danger border border-2 border-white rounded-circle sidebar-notif-dot" style="display:none;"></span>
+            </a>
+            <a href="{{ url_for('main.profile') }}" class="sidebar-link {% if request.endpoint == 'main.profile' %}active{% endif %}">
+                <i class="bi bi-person-circle"></i> My Profile
+            </a>
+        {% endif %}
+    </nav>
+    <div class="sidebar-footer">
+        <form method="post" action="{{ url_for('auth.logout') }}" id="sidebarLogoutForm">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="sidebar-link text-danger-soft border-0 bg-transparent w-100 text-start">
+                <i class="bi bi-box-arrow-right"></i> Log Out
+            </button>
+        </form>
+    </div>
+</aside>
+
+<!-- Mobile Offcanvas Sidebar -->
+<div class="offcanvas offcanvas-start" tabindex="-1" id="sidebarOffcanvas" aria-labelledby="sidebarOffcanvasLabel"
+     style="width:270px;background:#1E293B;">
+    <div class="offcanvas-header border-bottom border-secondary">
+        <h5 class="offcanvas-title text-white" id="sidebarOffcanvasLabel">
+            <i class="bi bi-shield-check me-2 text-primary"></i>WarrantyPro
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body p-0 d-flex flex-column">
+        <nav class="sidebar-nav flex-grow-1">
+            {% if current_user.is_customer() or current_user.is_dealer() %}
+                <a href="{{ url_for('warranty.dashboard') }}" class="sidebar-link">
+                    <i class="bi bi-grid-1x2-fill"></i> Dashboard
+                </a>
+                <a href="{{ url_for('warranty.warranties') }}" class="sidebar-link">
+                    <i class="bi bi-shield-fill-check"></i> My Warranties
+                </a>
+                <a href="{{ url_for('warranty.register_product') }}" class="sidebar-link">
+                    <i class="bi bi-plus-circle-fill"></i> Register Product
+                </a>
+                <a href="{{ url_for('warranty.claims') }}" class="sidebar-link">
+                    <i class="bi bi-file-earmark-text-fill"></i> My Claims
+                </a>
+                <a href="{{ url_for('warranty.notifications') }}" class="sidebar-link">
+                    <i class="bi bi-bell-fill"></i> Notifications
+                </a>
+                <a href="{{ url_for('main.profile') }}" class="sidebar-link">
+                    <i class="bi bi-person-circle"></i> My Profile
+                </a>
+            {% elif current_user.is_warranty_officer() %}
+                <a href="{{ url_for('officer.dashboard') }}" class="sidebar-link">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+                <a href="{{ url_for('officer.requests') }}" class="sidebar-link">
+                    <i class="bi bi-inbox-fill"></i> Requests Queue
+                </a>
+                <a href="{{ url_for('officer.notifications') }}" class="sidebar-link">
+                    <i class="bi bi-bell-fill"></i> Notifications
+                </a>
+                <a href="{{ url_for('officer.technicians') }}" class="sidebar-link">
+                    <i class="bi bi-person-fill-gear"></i> Technicians
+                </a>
+                <a href="{{ url_for('officer.add_technician') }}" class="sidebar-link">
+                    <i class="bi bi-person-plus-fill"></i> Add Technician
+                </a>
+                <a href="{{ url_for('officer.profile') }}" class="sidebar-link">
+                    <i class="bi bi-person-circle"></i> My Profile
+                </a>
+            {% elif current_user.is_admin() %}
+                <a href="{{ url_for('admin.dashboard') }}" class="sidebar-link">
+                    <i class="bi bi-speedometer2"></i> Dashboard
+                </a>
+                <a href="{{ url_for('admin.claims') }}" class="sidebar-link">
+                    <i class="bi bi-file-earmark-text-fill"></i> All Claims
+                </a>
+                <a href="{{ url_for('admin.warranties') }}" class="sidebar-link">
+                    <i class="bi bi-shield-fill-check"></i> All Warranties
+                </a>
+                <a href="{{ url_for('admin.products') }}" class="sidebar-link">
+                    <i class="bi bi-box-seam-fill"></i> Products
+                </a>
+                <a href="{{ url_for('admin.service_centers') }}" class="sidebar-link">
+                    <i class="bi bi-building-fill"></i> Service Centers
+                </a>
+                <a href="{{ url_for('admin.technicians') }}" class="sidebar-link">
+                    <i class="bi bi-person-fill-gear"></i> Technicians
+                </a>
+                <a href="{{ url_for('admin.users') }}" class="sidebar-link">
+                    <i class="bi bi-people-fill"></i> Users
+                </a>
+                <a href="{{ url_for('admin.reports') }}" class="sidebar-link">
+                    <i class="bi bi-bar-chart-fill"></i> Reports
+                </a>
+                <a href="{{ url_for('admin.audit_logs') }}" class="sidebar-link">
+                    <i class="bi bi-clock-history"></i> Audit Logs
+                </a>
+                <a href="{{ url_for('admin.profile') }}" class="sidebar-link">
+                    <i class="bi bi-person-circle"></i> My Profile
+                </a>
+            {% elif current_user.is_technician() %}
+                <a href="{{ url_for('admin.technician_dashboard') }}" class="sidebar-link">
+                    <i class="bi bi-grid-1x2-fill"></i> My Dashboard
+                </a>
+                <a href="{{ url_for('warranty.notifications') }}" class="sidebar-link">
+                    <i class="bi bi-bell-fill"></i> Notifications
+                </a>
+                <a href="{{ url_for('main.profile') }}" class="sidebar-link">
+                    <i class="bi bi-person-circle"></i> My Profile
+                </a>
+            {% endif %}
+        </nav>
+        <div class="p-3 border-top border-secondary">
+            <form method="post" action="{{ url_for('auth.logout') }}" id="mobileLogoutForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-outline-danger btn-sm w-100">
+                    <i class="bi bi-box-arrow-right me-1"></i> Log Out
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- ─────────── MAIN CONTENT ─────────── -->
+<main class="main-content {% if not current_user.is_authenticated %}no-sidebar{% endif %}">
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=True) %}
+    {% if messages %}
+    <div class="flash-container">
+        {% for category, message in messages %}
+        <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show shadow-sm" role="alert" style="animation: slideIn 0.3s ease;">
+            <i class="bi bi-{% if category == 'success' %}check-circle{% elif category == 'danger' or category == 'error' %}exclamation-triangle{% elif category == 'warning' %}exclamation-circle{% else %}info-circle{% endif %}-fill me-2"></i>
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+</main>
+
+<!-- ─────────── FOOTER ─────────── -->
+<footer class="app-footer {% if not current_user.is_authenticated %}no-sidebar{% endif %}">
+    <div class="container-fluid">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <span><i class="bi bi-shield-check text-primary me-1"></i><strong>WarrantyPro</strong> — Digital Warranty Management System</span>
+            <span class="text-muted small">
+                {% if current_user.is_authenticated %}
+                    Logged in as <strong>{{ current_user.role.name | replace('_', ' ') | title }}</strong> &bull;
+                {% endif %}
+                &copy; {{ 2024 }} WarrantyPro
+            </span>
+        </div>
+    </div>
+</footer>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Custom JS -->
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+// ── Global Back Button ──────────────────────────────────────────────────────
+// Inject a back button before every page-header that doesn't have one already,
+// unless the page opts out with data-no-back on the body tag.
+document.addEventListener('DOMContentLoaded', () => {
+    const dashboardEndpoints = ['dashboard', 'index', 'home'];
+    const isDashboard = dashboardEndpoints.some(e => window.location.pathname.endsWith(e) || window.location.pathname === '/');
+    const noBack = document.body.dataset.noBack;
+    const hasBack = document.querySelector('.btn-back-global');
+
+    if (!noBack && !isDashboard && window.history.length > 1 && !hasBack) {
+        const header = document.querySelector('.page-header, h1.page-title')?.closest('.page-header') ||
+                       document.querySelector('.page-header, .mb-3.mb-4');
+        if (header) {
+            const backBtn = document.createElement('div');
+            backBtn.className = 'mb-2 btn-back-global';
+            backBtn.innerHTML = `<button onclick="history.back()" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-arrow-left me-1"></i>Back
+            </button>`;
+            header.parentNode.insertBefore(backBtn, header);
+        }
+    }
+
+    // ── Today's date cap on all date pickers ──────────────────────────────────
+    const today = new Date().toISOString().split('T')[0];
+    document.querySelectorAll('input[type="date"]').forEach(input => {
+        // Only restrict dates that should be past/present (purchase_date, incident_date)
+        // Leave future-allowed fields (due_date) alone based on their name/id
+        const futureDateFields = ['due_date'];
+        const isFutureAllowed = futureDateFields.some(f => input.name === f || input.id === f);
+        if (!isFutureAllowed && !input.max) {
+            input.max = today;
+        }
+    });
+});
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

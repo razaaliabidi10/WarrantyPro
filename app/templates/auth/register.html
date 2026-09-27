@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-card" style="max-width:520px;">
+        <div class="text-center mb-4">
+            <div class="auth-logo">
+                <i class="bi bi-person-plus-fill"></i>
+            </div>
+            <h2 class="auth-title">Create Account</h2>
+            <p class="text-muted small">Join WarrantyPro and manage your warranties</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('auth.register') }}" novalidate>
+            {{ form.hidden_tag() }}
+
+            <!-- Role Toggle -->
+            <div class="mb-4">
+                <label class="form-label fw-semibold">Register As</label>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <input type="radio" class="btn-check" name="{{ form.role.name }}" id="role_customer"
+                               value="customer" {% if form.role.data == 'customer' or not form.role.data %}checked{% endif %}>
+                        <label class="btn btn-outline-primary w-100 d-flex align-items-center gap-2 justify-content-center py-3" for="role_customer">
+                            <i class="bi bi-person-fill fs-5"></i>
+                            <span class="fw-semibold">Customer</span>
+                        </label>
+                    </div>
+                    <div class="col-6">
+                        <input type="radio" class="btn-check" name="{{ form.role.name }}" id="role_dealer"
+                               value="dealer" {% if form.role.data == 'dealer' %}checked{% endif %}>
+                        <label class="btn btn-outline-primary w-100 d-flex align-items-center gap-2 justify-content-center py-3" for="role_dealer">
+                            <i class="bi bi-shop-window fs-5"></i>
+                            <span class="fw-semibold">Dealer</span>
+                        </label>
+                    </div>
+                </div>
+                {% for error in form.role.errors %}
+                    <div class="text-danger small mt-1">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <div class="mb-3">
+                <label for="full_name" class="form-label fw-semibold">Full Name / Business Name</label>
+                {{ form.full_name(class="form-control" + (" is-invalid" if form.full_name.errors else ""),
+                   id="full_name", placeholder="Enter your full name") }}
+                {% for error in form.full_name.errors %}
+                    <div class="invalid-feedback">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <div class="mb-3">
+                <label for="email" class="form-label fw-semibold">Email Address</label>
+                {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""),
+                   id="email", placeholder="your@email.com") }}
+                {% for error in form.email.errors %}
+                    <div class="invalid-feedback">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <div class="mb-3">
+                <label for="phone" class="form-label fw-semibold">Phone Number <span class="text-muted fw-normal">(optional)</span></label>
+                {{ form.phone(class="form-control", id="phone", placeholder="+1 234 567 8900") }}
+            </div>
+
+            <div class="mb-3">
+                <label for="password" class="form-label fw-semibold">Password</label>
+                {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""),
+                   id="password", placeholder="Min. 8 characters") }}
+                {% for error in form.password.errors %}
+                    <div class="invalid-feedback">{{ error }}</div>
+                {% endfor %}
+                <div class="form-text"><i class="bi bi-info-circle me-1"></i>At least 8 characters required.</div>
+            </div>
+
+            <div class="mb-4">
+                <label for="confirm_password" class="form-label fw-semibold">Confirm Password</label>
+                {{ form.confirm_password(class="form-control" + (" is-invalid" if form.confirm_password.errors else ""),
+                   id="confirm_password", placeholder="Repeat password") }}
+                {% for error in form.confirm_password.errors %}
+                    <div class="invalid-feedback">{{ error }}</div>
+                {% endfor %}
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-lg w-100 fw-semibold">
+                <i class="bi bi-person-plus me-2"></i>{{ form.submit.label.text }}
+            </button>
+        </form>
+
+        <hr class="my-4">
+        <p class="text-center text-muted small mb-0">
+            Already have an account?
+            <a href="{{ url_for('auth.login') }}" class="text-primary fw-semibold">Sign in</a>
+        </p>
+    </div>
+</div>
+{% endblock %}

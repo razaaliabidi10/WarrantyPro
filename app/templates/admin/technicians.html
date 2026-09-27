@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h1 class="page-title">Technicians</h1>
+        <p class="text-muted mb-0">Manage service personnel and assignments</p>
+    </div>
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTechnicianModal">
+        <i class="bi bi-person-plus me-1"></i>Add Technician
+    </button>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Technician</th>
+                        <th>Service Center</th>
+                        <th>Specialization</th>
+                        <th>Active Jobs</th>
+                        <th>Availability</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tech in technicians %}
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">{{ tech.full_name }}</div>
+                            <div class="text-muted small">{{ tech.user.email }}</div>
+                        </td>
+                        <td><div class="small">{{ tech.service_center.name }} ({{ tech.service_center.city or '—' }})</div></td>
+                        <td><span class="badge bg-light text-dark border">{{ tech.specialization or 'General' }}</span></td>
+                        <td>
+                            {% set active_jobs = active_jobs_map.get(tech.id, 0) %}
+                            <span class="badge {% if active_jobs > 5 %}bg-danger{% elif active_jobs > 0 %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                                {{ active_jobs }} Jobs
+                            </span>
+                        </td>
+                        <td>
+                            {% if tech.is_available %}
+                            <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Available</span>
+                            {% else %}
+                            <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Unavailable</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <!-- TODO: no edit_technician backend route exists yet -->
+                            <button class="btn btn-sm btn-outline-secondary" disabled title="Edit not yet available">
+                                <i class="bi bi-pencil"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center py-4">No technicians found.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add Technician Modal -->
+<div class="modal fade" id="addTechnicianModal" tabindex="-1" aria-labelledby="addTechnicianModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <form method="POST" action="{{ url_for('admin.technicians') }}" novalidate>
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="modal-header border-0">
+                    <h5 class="modal-title fw-bold" id="addTechnicianModalLabel">
+                        <i class="bi bi-person-fill-gear me-2 text-primary"></i>Add Technician
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info small py-2">
+                        <i class="bi bi-info-circle me-1"></i>
+                        A new user account will be created with a default password <strong>raza@8521</strong>.
+                        Ask the technician to change it after first login.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="techFullName">Full Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="techFullName" name="full_name"
+                               placeholder="e.g. John Smith" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="techEmail">Login Email <span class="text-danger">*</span></label>
+                        <input type="email" class="form-control" id="techEmail" name="email"
+                               placeholder="technician@example.com" required>
+                    </div>
+                    <div class="row g-3 mb-3">
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold" for="techSpecialization">Specialization</label>
+                            <input type="text" class="form-control" id="techSpecialization" name="specialization"
+                                   placeholder="e.g. Hardware, Electronics">
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold" for="techPhone">Phone</label>
+                            <input type="text" class="form-control" id="techPhone" name="phone"
+                                   placeholder="+1-555-0000">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="techCenter">Service Center <span class="text-danger">*</span></label>
+                        <select class="form-select" id="techCenter" name="service_center_id" required>
+                            <option value="">Select a service center…</option>
+                            {% for center in centers %}
+                            <option value="{{ center.id }}">{{ center.name }} ({{ center.city or '—' }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-person-plus me-1"></i>Add Technician
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

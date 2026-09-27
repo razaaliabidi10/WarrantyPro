@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.claims') }}">All Claims</a></li>
+        <li class="breadcrumb-item active">Claim #{{ claim.id }}</li>
+    </ol>
+</nav>
+
+<div class="row g-4">
+    <!-- Left Column: Claim Info -->
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Claim Information</h5>
+                {% set label, color = claim.status_label %}
+                <span class="badge fs-6 bg-{{ color }}">{{ label }}</span>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 mb-3">
+                    <div class="col-sm-6">
+                        <div class="info-label text-muted small">Customer</div>
+                        <div class="fw-semibold">{{ claim.customer.full_name }}</div>
+                        <div class="small text-muted">{{ claim.customer.user.email }}</div>
+                        {% if claim.customer.phone %}<div class="small text-muted">{{ claim.customer.phone }}</div>{% endif %}
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="info-label text-muted small">Product</div>
+                        <div class="fw-semibold">{{ claim.warranty.registration.product_model.product.brand }} {{ claim.warranty.registration.product_model.model_name }}</div>
+                        <div class="small text-muted">SN: {{ claim.warranty.registration.serial_number }}</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="info-label text-muted small">Claim Type</div>
+                        <div>{{ claim.claim_type | replace('_', ' ') | title }}</div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="info-label text-muted small">Submitted At</div>
+                        <div>{{ claim.submitted_at.strftime('%b %d, %Y at %I:%M %p') }}</div>
+                    </div>
+                </div>
+
+                <div class="info-label text-muted small">Customer Description</div>
+                <div class="p-3 bg-light rounded small mb-3">
+                    {{ claim.description }}
+                </div>
+
+                {% if claim.documents.count() > 0 %}
+                <div class="info-label text-muted small mb-2">Evidence Documents</div>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for doc in claim.documents %}
+                    <a href="/uploads/{{ doc.file_path }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-paperclip me-1"></i>{{ doc.original_filename }}
+                    </a>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white border-0">
+                <h5 class="card-title mb-0">Status History</h5>
+            </div>
+            <div class="card-body p-0">
+                <ul class="list-group list-group-flush">
+                    {% for h in claim.status_history.all() | reverse %}
+                    <li class="list-group-item p-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <strong>{{ h.changed_by_user.email if h.changed_by_user else 'System' }}</strong> changed status to
+                                <span class="badge bg-light text-dark border">{{ h.new_status | replace('_', ' ') | title }}</span>
+                                {% if h.notes %}
+                                <div class="small text-muted mt-1 fst-italic">"{{ h.notes }}"</div>
+                                {% endif %}
+                            </div>
+                            <span class="small text-muted">{{ h.changed_at.strftime('%b %d, %Y at %I:%M %p') }}</span>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Process Form -->
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm border-top border-primary border-4 sticky-top" style="top:90px; z-index:1;">
+            <div class="card-header bg-white border-0">
+                <h5 class="card-title mb-0"><i class="bi bi-gear-fill me-2 text-primary"></i>Process Claim</h5>
+            </div>
+            <div class="card-body bg-light rounded m-2 mt-0">
+                <form id="processForm" method="POST" action="{{ url_for('admin.claim_detail', claim_id=claim.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Update Status</label>
+                        <select name="new_status" id="status" class="form-select" required>
+                            <option value="">Select a status...</option>
+                            {% for val, label in all_statuses.items() %}
+                            <option value="{{ val }}" {% if claim.status == val %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div id="assignmentSection" style="display:none;" class="p-3 bg-white border rounded mb-3">
+                        <h6 class="fw-semibold small mb-2"><i class="bi bi-person-gear me-1"></i>Service Assignment</h6>
+                        <div class="mb-2">
+                            <label class="form-label small text-muted">Service Center</label>
+                            <select name="service_center_id" id="service_center_id" class="form-select form-select-sm">
+                                <option value="">Select a center...</option>
+                                {% for center in service_centers %}
+                                <option value="{{ center.id }}">{{ center.name }} ({{ center.city }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small text-muted">Technician</label>
+                            <select name="technician_id" id="technician_id" class="form-select form-select-sm">
+                                <option value="">Select a technician...</option>
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small text-muted">Due Date (Optional)</label>
+                            <input type="date" name="due_date" class="form-control form-control-sm">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small">Officer Notes (Internal/Customer visible)</label>
+                        <textarea name="notes" class="form-control" rows="4" placeholder="Reason for status change..."></textarea>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Update Claim</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const statusSelect = document.getElementById('status');
+    const assignmentSection = document.getElementById('assignmentSection');
+    const centerSelect = document.getElementById('service_center_id');
+    const techSelect = document.getElementById('technician_id');
+
+    // Parse technicians data passed from backend
+    const techniciansData = JSON.parse('{{ technicians_json | safe }}');
+
+    function toggleAssignment() {
+        const processForm = document.getElementById('processForm');
+        if (statusSelect.value === 'assigned') {
+            assignmentSection.style.display = 'block';
+            document.getElementById('service_center_id').required = true;
+            document.getElementById('technician_id').required = true;
+            processForm.action = "{{ url_for('admin.assign_claim', claim_id=claim.id) }}";
+        } else {
+            assignmentSection.style.display = 'none';
+            document.getElementById('service_center_id').required = false;
+            document.getElementById('technician_id').required = false;
+            processForm.action = "{{ url_for('admin.claim_detail', claim_id=claim.id) }}";
+        }
+    }
+
+    statusSelect.addEventListener('change', toggleAssignment);
+    toggleAssignment(); // initial check
+
+    centerSelect.addEventListener('change', function() {
+        const centerId = this.value;
+        techSelect.innerHTML = '<option value="">Select a technician...</option>';
+        if (centerId && techniciansData[centerId]) {
+            techniciansData[centerId].forEach(tech => {
+                const opt = document.createElement('option');
+                opt.value = tech.id;
+                opt.textContent = `${tech.name} (${tech.specialization})`;
+                techSelect.appendChild(opt);
+            });
+        }
+    });
+});
+</script>
+{% endblock %}

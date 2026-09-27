@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">My Claims</h1>
+        <p class="text-muted mb-0">Track all your warranty claims</p>
+    </div>
+</div>
+
+<!-- Filter Tabs -->
+<ul class="nav nav-pills mb-4 gap-1">
+    {% for label, val in [('All', 'all'), ('Open', 'open'), ('Resolved', 'resolved')] %}
+    <li class="nav-item">
+        <a class="nav-link {% if status_filter == val %}active{% endif %}" href="?status={{ val }}">{{ label }}</a>
+    </li>
+    {% endfor %}
+</ul>
+
+{% if claims %}
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Claim #</th>
+                        <th>Product</th>
+                        <th>Type</th>
+                        <th>Status</th>
+                        <th>Submitted</th>
+                        <th>Last Updated</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for claim in claims %}
+                    <tr class="clickable-row" data-href="{{ url_for('warranty.claim_detail', claim_id=claim.id) }}">
+                        <td><strong>#{{ claim.id }}</strong></td>
+                        <td>
+                            <div class="small">{{ claim.warranty.registration.product_model.product.brand }}</div>
+                            <div class="fw-semibold small">{{ claim.warranty.registration.product_model.model_name }}</div>
+                            <div class="text-muted smaller">SN: {{ claim.warranty.registration.serial_number }}</div>
+                        </td>
+                        <td>
+                            <span class="badge bg-light text-dark">
+                                {{ claim.claim_type | replace('_', ' ') | title }}
+                            </span>
+                        </td>
+                        <td>
+                            {% set label, color = claim.status_label %}
+                            <span class="badge bg-{{ color }}">{{ label }}</span>
+                        </td>
+                        <td class="text-muted small">{{ claim.submitted_at.strftime('%b %d, %Y') }}</td>
+                        <td class="text-muted small">{{ claim.updated_at.strftime('%b %d, %Y') if claim.updated_at else '—' }}</td>
+                        <td>
+                            <a href="{{ url_for('warranty.claim_detail', claim_id=claim.id) }}"
+                               class="btn btn-sm btn-outline-primary">View</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{% if pagination.pages > 1 %}
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if pagination.has_prev %}
+        <li class="page-item"><a class="page-link" href="?page={{ pagination.prev_num }}&status={{ status_filter }}">Previous</a></li>
+        {% endif %}
+        {% for p in pagination.iter_pages() %}
+        <li class="page-item {% if p == pagination.page %}active{% endif %}">
+            {% if p %}<a class="page-link" href="?page={{ p }}&status={{ status_filter }}">{{ p }}</a>
+            {% else %}<span class="page-link">…</span>{% endif %}
+        </li>
+        {% endfor %}
+        {% if pagination.has_next %}
+        <li class="page-item"><a class="page-link" href="?page={{ pagination.next_num }}&status={{ status_filter }}">Next</a></li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="empty-state">
+    <i class="bi bi-file-earmark-x"></i>
+    <h5>No claims found</h5>
+    <p class="text-muted">You haven't submitted any claims yet.</p>
+    <a href="{{ url_for('warranty.warranties') }}" class="btn btn-primary">View My Warranties</a>
+</div>
+{% endif %}
+{% endblock %}

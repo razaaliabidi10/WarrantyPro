@@ -1,0 +1,367 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Back Button -->
+<div class="mb-3">
+    <a href="{{ url_for('officer.requests') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Back to Requests
+    </a>
+</div>
+
+<div class="row g-4">
+    <!-- Left: Claim Details + Attachments -->
+    <div class="col-lg-7">
+        <!-- Claim Info Card -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-transparent border-0 pt-3 d-flex align-items-center justify-content-between">
+                <h5 class="fw-bold mb-0">
+                    <i class="bi bi-file-earmark-text-fill me-2 text-primary"></i>Claim #{{ claim.id }}
+                </h5>
+                {% set label, color = claim.status_label %}
+                <span class="badge bg-{{ color }} fs-6 px-3">{{ label }}</span>
+            </div>
+            <div class="card-body">
+                <!-- Customer Info -->
+                <div class="d-flex align-items-center gap-3 p-3 rounded-3 mb-3" style="background:#f8fafc;">
+                    <div class="avatar-circle" style="width:52px;height:52px;font-size:1.3rem;background:linear-gradient(135deg,#6366f1,#8b5cf6);">
+                        {{ claim.customer.full_name[0].upper() }}
+                    </div>
+                    <div>
+                        <div class="fw-bold">{{ claim.customer.full_name }}</div>
+                        <div class="text-muted small"><i class="bi bi-envelope me-1"></i>{{ claim.customer.user.email }}</div>
+                        {% if claim.customer.phone %}
+                        <div class="text-muted small"><i class="bi bi-phone me-1"></i>{{ claim.customer.phone }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Product Info -->
+                <div class="row g-2 mb-3">
+                    <div class="col-6">
+                        <div class="border rounded-3 p-2 h-100">
+                            <div class="text-muted small mb-1">Product</div>
+                            <div class="fw-semibold">{{ claim.warranty.registration.product_model.product.brand }}</div>
+                            <div class="small">{{ claim.warranty.registration.product_model.model_name }}</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border rounded-3 p-2 h-100">
+                            <div class="text-muted small mb-1">Serial Number</div>
+                            <div class="fw-semibold text-monospace">{{ claim.warranty.registration.serial_number }}</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border rounded-3 p-2 h-100">
+                            <div class="text-muted small mb-1">Claim Type</div>
+                            <div class="fw-semibold">{{ claim.claim_type | replace('_',' ') | title }}</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="border rounded-3 p-2 h-100">
+                            <div class="text-muted small mb-1">Warranty Expiry</div>
+                            <div class="fw-semibold {% if claim.warranty.status == 'active' %}text-success{% else %}text-danger{% endif %}">
+                                {{ claim.warranty.end_date.strftime('%b %d, %Y') }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div class="mb-3">
+                    <div class="fw-semibold mb-1">Customer Description</div>
+                    <div class="p-3 border rounded-3 text-muted" style="background:#f8fafc;white-space:pre-line;">{{ claim.description }}</div>
+                </div>
+
+                <!-- Officer Notes (if any) -->
+                {% if claim.officer_notes %}
+                <div class="mb-3">
+                    <div class="fw-semibold mb-1 text-danger">Officer Notes</div>
+                    <div class="p-3 border border-danger rounded-3 text-danger-emphasis" style="background:#fff5f5;">{{ claim.officer_notes }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Attachments Card -->
+        {% set docs = claim.documents.all() %}
+        {% if docs %}
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-transparent border-0 pt-3">
+                <h6 class="fw-semibold mb-0"><i class="bi bi-paperclip me-2 text-primary"></i>Attachments ({{ docs|length }})</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    {% for doc in docs %}
+                    {% set ext = doc.original_filename.rsplit('.', 1)[-1].lower() %}
+                    <div class="col-sm-6">
+                        <div class="border rounded-3 p-2 text-center">
+                            {% if ext in ['jpg','jpeg','png'] %}
+                            <a href="/uploads/{{ doc.file_path }}" target="_blank">
+                                <img src="/uploads/{{ doc.file_path }}" class="img-fluid rounded-2 mb-2"
+                                     style="max-height:160px;object-fit:cover;width:100%;" alt="Attachment">
+                            </a>
+                            {% else %}
+                            <div class="py-3">
+                                <i class="bi bi-file-earmark-pdf fs-1 text-danger"></i>
+                            </div>
+                            {% endif %}
+                            <a href="/uploads/{{ doc.file_path }}" target="_blank"
+                               class="btn btn-sm btn-outline-primary w-100">
+                                <i class="bi bi-download me-1"></i>{{ doc.original_filename | truncate(25) }}
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-body text-muted text-center py-3">
+                <i class="bi bi-paperclip me-1"></i>No attachments submitted
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Invoice Photos from Registration -->
+        {% set invoices = claim.warranty.registration.invoices.all() %}
+        {% if invoices %}
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-transparent border-0 pt-3">
+                <h6 class="fw-semibold mb-0"><i class="bi bi-receipt me-2 text-success"></i>Purchase Invoice(s)</h6>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    {% for inv in invoices %}
+                    {% set ext = inv.original_filename.rsplit('.', 1)[-1].lower() %}
+                    <div class="col-sm-6">
+                        <div class="border rounded-3 p-2 text-center">
+                            {% if ext in ['jpg','jpeg','png'] %}
+                            <a href="/uploads/{{ inv.file_path }}" target="_blank">
+                                <img src="/uploads/{{ inv.file_path }}" class="img-fluid rounded-2 mb-2"
+                                     style="max-height:160px;object-fit:cover;width:100%;" alt="Invoice">
+                            </a>
+                            {% else %}
+                            <div class="py-3"><i class="bi bi-file-earmark-pdf fs-1 text-danger"></i></div>
+                            {% endif %}
+                            <a href="/uploads/{{ inv.file_path }}" target="_blank"
+                               class="btn btn-sm btn-outline-success w-100">
+                                <i class="bi bi-eye me-1"></i>View Invoice
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Status History -->
+        {% if history %}
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0 pt-3">
+                <h6 class="fw-semibold mb-0"><i class="bi bi-clock-history me-2 text-muted"></i>Status Timeline</h6>
+            </div>
+            <div class="card-body py-2">
+                {% for h in history %}
+                <div class="d-flex gap-3 align-items-start py-2 {% if not loop.last %}border-bottom{% endif %}">
+                    <div class="flex-shrink-0 mt-1">
+                        <div class="rounded-circle" style="width:10px;height:10px;background:#6366f1;margin-top:4px;"></div>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="fw-semibold small">
+                            {% if h.old_status %}
+                            {{ h.old_status | replace('_',' ') | title }} → {{ h.new_status | replace('_',' ') | title }}
+                            {% else %}
+                            {{ h.new_status | replace('_',' ') | title }}
+                            {% endif %}
+                        </div>
+                        {% if h.notes %}<div class="text-muted small">{{ h.notes }}</div>{% endif %}
+                        <div class="text-muted" style="font-size:0.75rem;">
+                            {{ h.changed_at.strftime('%b %d, %Y at %I:%M %p') }}
+                            {% if h.changed_by %} · {{ h.changed_by.email }}{% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right: Action Panel -->
+    <div class="col-lg-5">
+        {% if claim.status in ('submitted', 'under_review') %}
+        <!-- APPROVE -->
+        <div class="card border-0 shadow-sm mb-3 border-success" style="border-left:4px solid #22c55e!important;">
+            <div class="card-header bg-transparent border-0 pt-3">
+                <h6 class="fw-bold text-success mb-0"><i class="bi bi-check-circle-fill me-2"></i>Approve Request</h6>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('officer.approve_claim', claim_id=claim.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Approval Note (optional)</label>
+                        <textarea name="notes" class="form-control" rows="3"
+                                  placeholder="Add any notes for the customer..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-success w-100"
+                            onclick="return confirm('Approve this warranty claim?')">
+                        <i class="bi bi-check-lg me-1"></i>Approve Claim
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- REJECT -->
+        <div class="card border-0 shadow-sm mb-3 border-danger" style="border-left:4px solid #ef4444!important;">
+            <div class="card-header bg-transparent border-0 pt-3">
+                <h6 class="fw-bold text-danger mb-0"><i class="bi bi-x-circle-fill me-2"></i>Reject Request</h6>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('officer.reject_claim', claim_id=claim.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Rejection Reason <span class="text-danger">*</span></label>
+                        <textarea name="reason" class="form-control" rows="3" required
+                                  placeholder="Explain why this claim is rejected..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-danger w-100"
+                            onclick="return confirm('Reject this warranty claim?')">
+                        <i class="bi bi-x-lg me-1"></i>Reject Claim
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        {% elif claim.status == 'approved' %}
+        <!-- ASSIGN TO TECHNICIAN -->
+        <div class="card border-0 shadow-sm mb-3" style="border-left:4px solid #6366f1!important;">
+            <div class="card-header bg-transparent border-0 pt-3">
+                <h6 class="fw-bold mb-0" style="color:#6366f1;"><i class="bi bi-person-fill-gear me-2"></i>Assign to Technician</h6>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('officer.assign_claim', claim_id=claim.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Service Center <span class="text-danger">*</span></label>
+                        <select name="service_center_id" id="serviceCenterSelect" class="form-select" required>
+                            <option value="">— Select Service Center —</option>
+                            {% for center in service_centers %}
+                            <option value="{{ center.id }}">{{ center.name }} ({{ center.city or 'N/A' }})</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Technician <span class="text-danger">*</span></label>
+                        <select name="technician_id" id="technicianSelect" class="form-select" required>
+                            <option value="">— Select Technician —</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Due Date</label>
+                        <input type="date" name="due_date" class="form-control"
+                               min="{{ now().strftime('%Y-%m-%d') if now else '' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Assignment Notes</label>
+                        <textarea name="assignment_notes" class="form-control" rows="2"
+                                  placeholder="Instructions for the technician..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-send-fill me-1"></i>Assign Technician
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        {% elif claim.status in ('assigned', 'in_repair', 'ready', 'completed', 'closed') %}
+        <!-- Assignment Info -->
+        {% if claim.service_assignment %}
+        {% set sa = claim.service_assignment %}
+        <div class="card border-0 shadow-sm mb-3" style="border-left:4px solid #0ea5e9!important;">
+            <div class="card-header bg-transparent border-0 pt-3">
+                <h6 class="fw-bold mb-0" style="color:#0ea5e9;"><i class="bi bi-person-fill-gear me-2"></i>Assignment Details</h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-2"><span class="text-muted small">Technician:</span>
+                    <strong class="ms-2">{{ sa.technician.full_name }}</strong></div>
+                <div class="mb-2"><span class="text-muted small">Service Center:</span>
+                    <strong class="ms-2">{{ sa.service_center.name }}</strong></div>
+                <div class="mb-2"><span class="text-muted small">Assigned:</span>
+                    <strong class="ms-2">{{ sa.assigned_at.strftime('%b %d, %Y') }}</strong></div>
+                <div class="mb-2"><span class="text-muted small">Due:</span>
+                    <strong class="ms-2">{{ sa.due_date.strftime('%b %d, %Y') if sa.due_date else 'Not set' }}</strong></div>
+                <div class="mb-2"><span class="text-muted small">Work Status:</span>
+                    <span class="badge ms-2 bg-{{ 'success' if sa.status == 'completed' else ('warning' if sa.status == 'in_progress' else 'secondary') }} text-dark">
+                        {{ sa.status | title }}
+                    </span>
+                </div>
+                {% if sa.technician_notes %}
+                <div class="mt-2 p-2 rounded" style="background:#f0f9ff;">
+                    <div class="small fw-semibold text-info">Technician Notes:</div>
+                    <div class="small">{{ sa.technician_notes }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        {% endif %}
+
+        <!-- Claim Summary Card -->
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0 pt-3">
+                <h6 class="fw-semibold mb-0"><i class="bi bi-info-circle me-2 text-muted"></i>Claim Summary</h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless table-sm mb-0">
+                    <tr>
+                        <td class="text-muted small">Submitted</td>
+                        <td class="small fw-semibold">{{ claim.submitted_at.strftime('%b %d, %Y') }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Purchase Date</td>
+                        <td class="small fw-semibold">{{ claim.warranty.registration.purchase_date.strftime('%b %d, %Y') }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Retailer</td>
+                        <td class="small fw-semibold">{{ claim.warranty.registration.retailer_name or 'N/A' }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Warranty Until</td>
+                        <td class="small fw-semibold">{{ claim.warranty.end_date.strftime('%b %d, %Y') }}</td>
+                    </tr>
+                    <tr>
+                        <td class="text-muted small">Warranty Status</td>
+                        <td><span class="badge bg-{{ 'success' if claim.warranty.status == 'active' else 'danger' }}">
+                            {{ claim.warranty.status | title }}</span></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script id="tech-data" type="application/json">{{ technicians_json | safe }}</script>
+<script>
+const techData = JSON.parse(document.getElementById('tech-data').textContent || '{}');
+const techSelect = document.getElementById('technicianSelect');
+const centerSelect = document.getElementById('serviceCenterSelect');
+if (centerSelect) {
+    centerSelect.addEventListener('change', function() {
+        const centerId = parseInt(this.value);
+        techSelect.innerHTML = '<option value="">— Select Technician —</option>';
+        if (techData[centerId]) {
+            techData[centerId].forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = `${t.name} (${t.specialization})`;
+                techSelect.appendChild(opt);
+            });
+        }
+    });
+}
+</script>
+{% endblock %}

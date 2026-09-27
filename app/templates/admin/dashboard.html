@@ -1,0 +1,494 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="admin-dashboard-container">
+    <!-- Page Header with Compact Action Buttons -->
+    <div class="page-header d-flex flex-wrap justify-content-between align-items-center mb-3 pb-1">
+        <div>
+            <h1 class="page-title fs-4 mb-0">{% if current_user.is_admin() %}Admin{% else %}Warranty Officer{% endif %} Dashboard</h1>
+            <p class="text-muted small mb-0">System overview and key performance indicators</p>
+        </div>
+        <div class="d-flex align-items-center gap-2 mt-2 mt-sm-0">
+            <a href="{{ url_for('admin.reports') }}" class="btn btn-outline-primary btn-sm py-1 px-2.5 shadow-none" style="font-size:0.8rem;">
+                <i class="bi bi-bar-chart-fill me-1"></i>Reports
+            </a>
+            {% if current_user.is_admin() %}
+            <a href="{{ url_for('admin.products') }}" class="btn btn-outline-secondary btn-sm py-1 px-2.5 shadow-none" style="font-size:0.8rem;">
+                <i class="bi bi-box-seam me-1"></i>Products
+            </a>
+            <a href="{{ url_for('admin.users') }}" class="btn btn-outline-secondary btn-sm py-1 px-2.5 shadow-none" style="font-size:0.8rem;">
+                <i class="bi bi-people me-1"></i>Users
+            </a>
+            {% endif %}
+            <span class="text-muted small border-start ps-2 ms-1 d-none d-md-inline" style="font-size:0.8rem;">
+                <i class="bi bi-calendar3 me-1"></i>{{ now().strftime('%b %d, %Y') if now else 'Today' }}
+            </span>
+        </div>
+    </div>
+
+    <!-- 6 KPI Stat Cards (Compact & Uniformly Aligned in a Single Row) -->
+    <div class="row g-2 mb-3">
+        <!-- 1. Total Registrations -->
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="kpi-card">
+                <div class="kpi-icon" style="background:rgba(37,99,235,0.1); color:#2563eb;">
+                    <i class="bi bi-box-seam-fill"></i>
+                </div>
+                <div class="kpi-body">
+                    <div class="kpi-value text-dark">{{ total_registrations }}</div>
+                    <div class="kpi-label" title="Total Registrations">Total Registrations</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Active Warranties -->
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="kpi-card">
+                <div class="kpi-icon" style="background:rgba(16,185,129,0.1); color:#10b981;">
+                    <i class="bi bi-shield-fill-check"></i>
+                </div>
+                <div class="kpi-body">
+                    <div class="kpi-value text-success">{{ active_warranties }}</div>
+                    <div class="kpi-label" title="Active Warranties">Active Warranties</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. Expiring Soon -->
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="kpi-card">
+                <div class="kpi-icon" style="background:rgba(239,68,68,0.1); color:#ef4444;">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+                <div class="kpi-body">
+                    <div class="kpi-value text-danger">{{ expiring_soon }}</div>
+                    <div class="kpi-label" title="Expiring Soon (<=30d)">Expiring Soon (&le;30d)</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Total Claims -->
+        <div class="col-6 col-md-4 col-xl-2">
+            <div class="kpi-card">
+                <div class="kpi-icon" style="background:rgba(245,158,11,0.1); color:#f59e0b;">
+                    <i class="bi bi-file-earmark-text-fill"></i>
+                </div>
+                <div class="kpi-body">
+                    <div class="kpi-value text-warning">{{ total_claims }}</div>
+                    <div class="kpi-label" title="Total Claims">Total Claims</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. Pending Review -->
+        <div class="col-6 col-md-4 col-xl-2">
+            <a href="{{ url_for('admin.claims', status='under_review') }}" class="text-decoration-none text-reset d-block h-100">
+                <div class="kpi-card kpi-card-clickable border-primary-subtle">
+                    <div class="kpi-icon" style="background:rgba(13,202,240,0.12); color:#0891b2;">
+                        <i class="bi bi-hourglass-split"></i>
+                    </div>
+                    <div class="kpi-body">
+                        <div class="kpi-value text-primary d-flex align-items-center justify-content-between">
+                            {{ pending_review }}
+                            <i class="bi bi-arrow-right-short text-primary opacity-50" style="font-size:1rem;"></i>
+                        </div>
+                        <div class="kpi-label" title="Pending Review">Pending Review</div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- 6. Resolved Today -->
+        <div class="col-6 col-md-4 col-xl-2">
+            <a href="{{ url_for('admin.claims', status='resolved') }}" class="text-decoration-none text-reset d-block h-100">
+                <div class="kpi-card kpi-card-clickable border-success-subtle">
+                    <div class="kpi-icon" style="background:rgba(16,185,129,0.12); color:#059669;">
+                        <i class="bi bi-check-circle-fill"></i>
+                    </div>
+                    <div class="kpi-body">
+                        <div class="kpi-value text-success d-flex align-items-center justify-content-between">
+                            {{ resolved_today }}
+                            <i class="bi bi-arrow-right-short text-success opacity-50" style="font-size:1rem;"></i>
+                        </div>
+                        <div class="kpi-label" title="Resolved Today">Resolved Today</div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Data Tables Section: Recent Claims & Recent Audit Logs side-by-side with Slicers -->
+    <div class="row g-3">
+        <!-- 1. Recent Claims with Slicer -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm dashboard-panel h-100">
+                <div class="card-header bg-white border-bottom border-light-subtle d-flex flex-wrap justify-content-between align-items-center py-2 px-3 gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="panel-icon-sm bg-primary-subtle text-primary">
+                            <i class="bi bi-clock-history"></i>
+                        </div>
+                        <h6 class="card-title mb-0 fw-bold fs-6 text-dark">Recent Claims</h6>
+                        <span class="badge bg-light text-muted border small fw-normal" id="claimsCountBadge">{{ recent_claims|length }}</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 ms-auto">
+                        <!-- Slicer Dropdown for Claims -->
+                        <div class="slicer-box d-flex align-items-center">
+                            <i class="bi bi-funnel-fill text-primary me-1.5" style="font-size:0.75rem;"></i>
+                            <select id="claimStatusSlicer" class="form-select form-select-sm slicer-select" aria-label="Filter claims by status">
+                                <option value="all">All Statuses</option>
+                                <option value="under_review">Under Review</option>
+                                <option value="assigned">Assigned</option>
+                                <option value="in_repair">In Repair</option>
+                                <option value="ready">Ready for Pickup</option>
+                                <option value="completed">Completed</option>
+                                <option value="closed">Closed</option>
+                                <option value="approved">Approved</option>
+                                <option value="submitted">Submitted</option>
+                                <option value="rejected">Rejected</option>
+                            </select>
+                        </div>
+                        <a href="{{ url_for('admin.claims') }}" class="btn btn-sm btn-outline-primary py-1 px-2.5 text-nowrap" style="font-size:0.78rem;">
+                            View All
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-0 dashboard-panel-body">
+                    <div class="table-responsive dashboard-table-scroll">
+                        <table class="table table-hover align-middle mb-0" id="claimsTable">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="ps-3 py-2 text-secondary" style="width: 80px;">Claim #</th>
+                                    <th class="py-2 text-secondary">Customer & Product</th>
+                                    <th class="py-2 text-secondary" style="width: 125px;">Status</th>
+                                    <th class="pe-3 py-2 text-end text-secondary" style="width: 85px;">Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="claimsTableBody">
+                                {% for c in recent_claims %}
+                                <tr class="clickable-row claim-row" data-href="{{ url_for('admin.claim_detail', claim_id=c.id) }}" data-status="{{ c.status }}">
+                                    <td class="ps-3 fw-bold text-primary small">#{{ c.id }}</td>
+                                    <td>
+                                        <div class="fw-semibold text-dark small text-truncate" style="max-width: 220px;">{{ c.customer.full_name }}</div>
+                                        <div class="text-muted text-truncate" style="font-size:0.75rem; max-width: 220px;">
+                                            {{ c.warranty.registration.product_model.model_name if c.warranty and c.warranty.registration and c.warranty.registration.product_model else 'Product Claim' }}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-{{ c.status_label[1] }} fw-medium px-2 py-1" style="font-size:0.72rem;">{{ c.status_label[0] }}</span>
+                                    </td>
+                                    <td class="pe-3 text-muted text-end small">{{ c.submitted_at.strftime('%b %d') }}</td>
+                                </tr>
+                                {% else %}
+                                <tr id="noClaimsRow"><td colspan="4" class="text-center text-muted py-4 small">No claims found.</td></tr>
+                                {% endfor %}
+                                <tr id="noClaimsFilteredRow" style="display:none;">
+                                    <td colspan="4" class="text-center text-muted py-4 small">
+                                        <i class="bi bi-funnel text-muted me-1"></i>No claims match the selected status.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Recent Audit Logs with Slicer -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm dashboard-panel h-100">
+                <div class="card-header bg-white border-bottom border-light-subtle d-flex flex-wrap justify-content-between align-items-center py-2 px-3 gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="panel-icon-sm bg-primary-subtle text-primary">
+                            <i class="bi bi-list-check"></i>
+                        </div>
+                        <h6 class="card-title mb-0 fw-bold fs-6 text-dark">Recent Audit Logs</h6>
+                        <span class="badge bg-light text-muted border small fw-normal" id="auditsCountBadge">{{ recent_audits|length }}</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 ms-auto">
+                        <!-- Slicer Dropdown for Audit Logs -->
+                        <div class="slicer-box d-flex align-items-center">
+                            <i class="bi bi-funnel-fill text-primary me-1.5" style="font-size:0.75rem;"></i>
+                            <select id="auditActionSlicer" class="form-select form-select-sm slicer-select" aria-label="Filter audit logs by action">
+                                <option value="all">All Actions</option>
+                                <option value="user_login">Logins (user_login)</option>
+                                <option value="user_logout">Logouts (user_logout)</option>
+                                <option value="user_registered">Registrations</option>
+                                <option value="claim_">All Claim Events</option>
+                                <option value="product_">All Product Events</option>
+                                <option value="technician_">Technician Events</option>
+                            </select>
+                        </div>
+                        <a href="{{ url_for('admin.audit_logs') }}" class="btn btn-sm btn-outline-primary py-1 px-2.5 text-nowrap" style="font-size:0.78rem;">
+                            View All
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body p-0 dashboard-panel-body">
+                    <div class="table-responsive dashboard-table-scroll">
+                        <table class="table table-hover align-middle mb-0" id="auditsTable">
+                            <thead class="table-light sticky-top">
+                                <tr>
+                                    <th class="ps-3 py-2 text-secondary">Action</th>
+                                    <th class="py-2 text-secondary">User</th>
+                                    <th class="pe-3 py-2 text-end text-secondary" style="width: 170px;">Time</th>
+                                </tr>
+                            </thead>
+                            <tbody id="auditsTableBody">
+                                {% for a in recent_audits %}
+                                <tr class="audit-row" data-action="{{ a.action|lower }}">
+                                    <td class="ps-3">
+                                        <span class="badge bg-light text-dark border fw-normal small font-monospace py-1 px-1.5" style="font-size:0.75rem;">
+                                            {{ a.action }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="small fw-semibold text-truncate" style="max-width: 200px;">
+                                            {{ a.user.email if a.user else 'System' }}
+                                        </div>
+                                    </td>
+                                    <td class="pe-3 text-muted text-end small">{{ a.timestamp.strftime('%b %d, %Y %I:%M %p') }}</td>
+                                </tr>
+                                {% else %}
+                                <tr id="noAuditsRow"><td colspan="3" class="text-center text-muted py-4 small">No activity logs found.</td></tr>
+                                {% endfor %}
+                                <tr id="noAuditsFilteredRow" style="display:none;">
+                                    <td colspan="3" class="text-center text-muted py-4 small">
+                                        <i class="bi bi-funnel text-muted me-1"></i>No audit logs match the selected action.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* Dashboard Compact Single-Page Layout */
+.admin-dashboard-container {
+    max-width: 100%;
+    margin-top: -0.85rem;
+}
+
+/* 6 KPI Cards Compact Styling */
+.kpi-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: var(--radius-md);
+    padding: 0.75rem 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    height: 100%;
+    min-height: 68px;
+}
+.kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+}
+.kpi-card-clickable:hover {
+    border-color: #93c5fd;
+    cursor: pointer;
+}
+.kpi-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+}
+.kpi-body {
+    flex-grow: 1;
+    min-width: 0;
+}
+.kpi-value {
+    font-family: var(--font-heading);
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.15;
+}
+.kpi-label {
+    color: #64748b;
+    font-size: 0.725rem;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Dashboard Panel & Tables */
+.dashboard-panel {
+    border-radius: var(--radius-md);
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 280px);
+    min-height: 400px;
+    max-height: 580px;
+}
+.dashboard-panel-body {
+    flex: 1 1 auto;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+.dashboard-table-scroll {
+    flex: 1 1 auto;
+    overflow-y: auto;
+}
+
+/* Slicer Dropdown Component */
+.slicer-box {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 0.15rem 0.5rem;
+}
+.slicer-select {
+    border: none !important;
+    background-color: transparent !important;
+    padding-top: 0.15rem;
+    padding-bottom: 0.15rem;
+    padding-left: 0.25rem;
+    padding-right: 1.5rem;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: #1e293b;
+    cursor: pointer;
+    box-shadow: none !important;
+}
+.panel-icon-sm {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+}
+
+/* Custom Sleek Scrollbar */
+.dashboard-table-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+.dashboard-table-scroll::-webkit-scrollbar-track {
+    background: #f8fafc;
+}
+.dashboard-table-scroll::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+.dashboard-table-scroll::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // ----------------------------------------------------
+    // Slicer 1: Filter Recent Claims by Status
+    // ----------------------------------------------------
+    const claimSlicer = document.getElementById('claimStatusSlicer');
+    if (claimSlicer) {
+        claimSlicer.addEventListener('change', function() {
+            const selectedStatus = this.value;
+            const rows = document.querySelectorAll('#claimsTableBody .claim-row');
+            let visibleCount = 0;
+
+            rows.forEach(function(row) {
+                const rowStatus = row.getAttribute('data-status');
+                if (selectedStatus === 'all' || rowStatus === selectedStatus) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            // Toggle no results notice
+            const noFilteredRow = document.getElementById('noClaimsFilteredRow');
+            if (noFilteredRow) {
+                noFilteredRow.style.display = (visibleCount === 0 && rows.length > 0) ? '' : 'none';
+            }
+
+            // Update counter badge
+            const badge = document.getElementById('claimsCountBadge');
+            if (badge) {
+                badge.textContent = (selectedStatus === 'all') ? rows.length : (visibleCount + '/' + rows.length);
+            }
+        });
+    }
+
+    // ----------------------------------------------------
+    // Slicer 2: Filter Recent Audit Logs by Action
+    // ----------------------------------------------------
+    const auditSlicer = document.getElementById('auditActionSlicer');
+    if (auditSlicer) {
+        // Dynamically add any distinct action from rows that isn't in default list
+        const existingValues = Array.from(auditSlicer.options).map(o => o.value);
+        const rows = document.querySelectorAll('#auditsTableBody .audit-row');
+        const discoveredActions = new Set();
+
+        rows.forEach(function(r) {
+            const act = r.getAttribute('data-action');
+            if (act && !discoveredActions.has(act)) {
+                discoveredActions.add(act);
+                if (!existingValues.includes(act)) {
+                    const opt = document.createElement('option');
+                    opt.value = act;
+                    opt.textContent = act;
+                    auditSlicer.appendChild(opt);
+                }
+            }
+        });
+
+        auditSlicer.addEventListener('change', function() {
+            const selectedAction = this.value;
+            let visibleCount = 0;
+
+            rows.forEach(function(row) {
+                const rowAction = row.getAttribute('data-action') || '';
+                let isMatch = false;
+
+                if (selectedAction === 'all') {
+                    isMatch = true;
+                } else if (selectedAction.endsWith('_')) {
+                    // Category prefix matching, e.g. claim_, product_, technician_
+                    isMatch = rowAction.startsWith(selectedAction);
+                } else {
+                    // Exact action matching
+                    isMatch = (rowAction === selectedAction);
+                }
+
+                if (isMatch) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            // Toggle no results notice
+            const noFilteredRow = document.getElementById('noAuditsFilteredRow');
+            if (noFilteredRow) {
+                noFilteredRow.style.display = (visibleCount === 0 && rows.length > 0) ? '' : 'none';
+            }
+
+            // Update counter badge
+            const badge = document.getElementById('auditsCountBadge');
+            if (badge) {
+                badge.textContent = (selectedAction === 'all') ? rows.length : (visibleCount + '/' + rows.length);
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

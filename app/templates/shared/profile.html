@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Back Button -->
+<div class="mb-3">
+    <a href="javascript:history.back()" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Back
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8 col-xl-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4 p-md-5">
+
+                <!-- ── Profile Avatar Header ── -->
+                <div class="text-center mb-4">
+                    <div class="position-relative d-inline-block mb-3">
+                        {% if current_user.profile_photo %}
+                        <img src="/uploads/{{ current_user.profile_photo }}"
+                             class="rounded-circle shadow"
+                             style="width:110px;height:110px;object-fit:cover;border:4px solid #fff;box-shadow:0 4px 20px rgba(99,102,241,0.25);"
+                             id="avatarPreview" alt="Profile Photo">
+                        {% else %}
+                        <div class="rounded-circle d-flex align-items-center justify-content-center shadow mx-auto"
+                             style="width:110px;height:110px;font-size:2.5rem;font-weight:700;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:4px solid #fff;"
+                             id="avatarFallback">
+                            {{ (current_user.full_name or current_user.email)[0].upper() }}
+                        </div>
+                        {% endif %}
+                        <label for="photoInput"
+                               class="position-absolute bottom-0 end-0 btn btn-sm btn-primary rounded-circle p-1"
+                               style="width:32px;height:32px;cursor:pointer;" title="Change photo">
+                            <i class="bi bi-camera-fill" style="font-size:0.8rem;"></i>
+                        </label>
+                    </div>
+                    <h5 class="fw-bold mb-1">
+                        {{ current_user.full_name or current_user.email.split('@')[0] | title }}
+                    </h5>
+                    <span class="badge text-bg-primary px-3 py-2">
+                        {{ current_user.role.name | replace('_', ' ') | title }}
+                    </span>
+                </div>
+
+                <!-- ── FORM ── -->
+                {% if current_user.is_admin() %}
+                    {% set form_action = url_for('admin.profile') %}
+                {% elif current_user.is_warranty_officer() %}
+                    {% set form_action = url_for('officer.profile') %}
+                {% else %}
+                    {% set form_action = url_for('main.profile') %}
+                {% endif %}
+
+                <form method="post" enctype="multipart/form-data"
+                      id="profileForm" action="{{ form_action }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <!-- Hidden photo input triggered by camera icon -->
+                    <input type="file" id="photoInput" name="profile_photo" accept="image/*"
+                           class="d-none" onchange="previewPhoto(this)">
+
+                    <hr class="my-4">
+
+                    <!-- ── Editable Fields ── -->
+                    <div class="mb-4">
+                        <h6 class="fw-semibold mb-3 text-muted text-uppercase"
+                            style="font-size:0.75rem;letter-spacing:.05em;">
+                            <i class="bi bi-pencil-fill me-1"></i>Editable Information
+                        </h6>
+
+                        <!-- Display Name — everyone can edit -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Display Name</label>
+                            <input type="text" name="full_name" class="form-control form-control-lg"
+                                   value="{{ current_user.full_name or '' }}"
+                                   placeholder="Enter your name">
+                            <div class="form-text">This is how your name appears across the system.</div>
+                        </div>
+
+                        {% if current_user.is_admin() %}
+                        <!-- Email — admin only editable -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                Email Address
+                                <span class="badge bg-success ms-1" style="font-size:0.6rem;">Admin Edit</span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-envelope-fill text-muted"></i></span>
+                                <input type="email" name="email" class="form-control"
+                                       value="{{ current_user.email }}" required>
+                            </div>
+                            <div class="form-text text-warning">
+                                <i class="bi bi-exclamation-triangle me-1"></i>
+                                Changing your email will update your login credentials.
+                            </div>
+                        </div>
+
+                        <!-- Phone — admin only editable -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                Phone Number
+                                <span class="badge bg-success ms-1" style="font-size:0.6rem;">Admin Edit</span>
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-phone-fill text-muted"></i></span>
+                                <input type="text" name="phone" class="form-control"
+                                       value="{{ current_user.customer_profile.phone if current_user.customer_profile else '' }}"
+                                       placeholder="e.g. +1 555 000 0000">
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- ── Read-only Fields (non-admin) ── -->
+                    {% if not current_user.is_admin() %}
+                    <div class="mb-4">
+                        <h6 class="fw-semibold mb-3 text-muted text-uppercase"
+                            style="font-size:0.75rem;letter-spacing:.05em;">
+                            <i class="bi bi-lock-fill me-1"></i>Permanent Information
+                        </h6>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Email Address</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-envelope-fill text-muted"></i></span>
+                                <input type="email" class="form-control bg-light"
+                                       value="{{ current_user.email }}" readonly disabled>
+                            </div>
+                            <div class="form-text text-muted">
+                                <i class="bi bi-lock me-1"></i>Email cannot be changed. Contact admin if needed.
+                            </div>
+                        </div>
+
+                        {% set profile = current_user.customer_profile or current_user.technician_profile %}
+                        {% if profile and profile.phone %}
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Phone Number</label>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="bi bi-phone-fill text-muted"></i></span>
+                                <input type="text" class="form-control bg-light"
+                                       value="{{ profile.phone }}" readonly disabled>
+                            </div>
+                            <div class="form-text text-muted">
+                                <i class="bi bi-lock me-1"></i>Phone cannot be changed. Contact admin if needed.
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+
+                    <!-- ── Account Info ── -->
+                    <div class="mb-4">
+                        <h6 class="fw-semibold mb-3 text-muted text-uppercase"
+                            style="font-size:0.75rem;letter-spacing:.05em;">
+                            <i class="bi bi-info-circle me-1"></i>Account Details
+                        </h6>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div class="p-3 rounded-3" style="background:#f8fafc;">
+                                    <div class="small text-muted">Member Since</div>
+                                    <div class="fw-semibold small">
+                                        {{ current_user.created_at.strftime('%b %d, %Y') }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-3 rounded-3" style="background:#f8fafc;">
+                                    <div class="small text-muted">Last Login</div>
+                                    <div class="fw-semibold small">
+                                        {{ current_user.last_login.strftime('%b %d, %Y') if current_user.last_login else 'N/A' }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 py-2">
+                        <i class="bi bi-save2-fill me-2"></i>Save Changes
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function previewPhoto(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('avatarPreview');
+            const fallback = document.getElementById('avatarFallback');
+            if (preview) {
+                preview.src = e.target.result;
+            } else if (fallback) {
+                // Replace initials fallback with an <img>
+                const img = document.createElement('img');
+                img.src = e.target.result;
+                img.className = 'rounded-circle shadow';
+                img.id = 'avatarPreview';
+                img.style.cssText = 'width:110px;height:110px;object-fit:cover;border:4px solid #fff;';
+                fallback.replaceWith(img);
+            }
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.products') }}">Products</a></li>
+        <li class="breadcrumb-item active">Add Product</li>
+    </ol>
+</nav>
+
+<div class="page-header mb-4">
+    <h1 class="page-title">{% if step == 1 %}Add New Product{% elif step == 2 %}Add Product Model{% else %}Add Warranty Policy{% endif %}</h1>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('admin.add_product') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                    <input type="hidden" name="step" value="{{ step }}">
+                    
+                    {% if step == 1 %}
+                    <div class="row g-3 mb-4">
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold">Category</label>
+                            <input type="text" name="category" class="form-control" placeholder="e.g. Smartphone" required>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold">Brand</label>
+                            <input type="text" name="brand" class="form-control" placeholder="e.g. Samsung" required>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Product Family / Line Name</label>
+                        <input type="text" name="name" class="form-control" placeholder="e.g. Galaxy S Series" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Description</label>
+                        <textarea name="description" class="form-control" rows="3" placeholder="Optional product description"></textarea>
+                    </div>
+                    
+                    {% elif step == 2 %}
+                    <input type="hidden" name="product_id" value="{{ product.id }}">
+                    <p class="text-muted mb-4">Adding model for <strong>{{ product.brand }} {{ product.name }}</strong></p>
+                    
+                    <div class="row g-3 mb-4">
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold">Model Name</label>
+                            <input type="text" name="model_name" class="form-control" placeholder="e.g. Galaxy S24 Ultra" required>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label fw-semibold">Model Number</label>
+                            <input type="text" name="model_number" class="form-control" placeholder="e.g. SM-S928B" required>
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Warranty Period (Months)</label>
+                        <input type="number" name="warranty_period_months" class="form-control w-50" value="12" required>
+                        <div class="form-text">Standard duration in months (e.g. 12, 24)</div>
+                    </div>
+                    
+                    {% elif step == 3 %}
+                    <input type="hidden" name="model_id" value="{{ model.id }}">
+                    <p class="text-muted mb-4">Defining warranty policy for <strong>{{ model.model_name }} ({{ model.model_number }})</strong></p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Policy Name</label>
+                        <input type="text" name="policy_name" class="form-control" placeholder="e.g. Standard 1 Year Warranty" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Coverage Details</label>
+                        <textarea name="coverage_details" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Exclusions</label>
+                        <textarea name="exclusions" class="form-control" rows="3"></textarea>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Terms & Conditions</label>
+                        <textarea name="terms" class="form-control" rows="3"></textarea>
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex gap-3">
+                        <a href="{{ url_for('admin.products') }}" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">{% if step == 3 %}Finish & Save{% else %}Continue to Next Step <i class="bi bi-arrow-right"></i>{% endif %}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

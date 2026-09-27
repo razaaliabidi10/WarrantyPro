@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('warranty.claims') }}">My Claims</a></li>
+        <li class="breadcrumb-item active">Claim #{{ claim.id }}</li>
+    </ol>
+</nav>
+
+{% set label, color = claim.status_label %}
+<div class="page-header mb-4">
+    <div>
+        <h1 class="page-title">Claim #{{ claim.id }}</h1>
+        <p class="text-muted mb-0">{{ claim.claim_type | replace('_', ' ') | title }}</p>
+    </div>
+    <span class="badge fs-5 bg-{{ color }}">{{ label }}</span>
+</div>
+
+<div class="row g-4">
+    <!-- Left: Claim Details -->
+    <div class="col-lg-8">
+        <!-- Summary Card -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0">
+                <h5 class="card-title mb-0"><i class="bi bi-info-circle me-2 text-primary"></i>Claim Details</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3 mb-3">
+                    <div class="col-sm-6">
+                        <div class="info-item">
+                            <div class="info-label">Product</div>
+                            <div class="info-value">{{ claim.warranty.registration.product_model.product.brand }} {{ claim.warranty.registration.product_model.model_name }}</div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="info-item">
+                            <div class="info-label">Serial Number</div>
+                            <div class="info-value">{{ claim.warranty.registration.serial_number }}</div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="info-item">
+                            <div class="info-label">Claim Type</div>
+                            <div class="info-value">{{ claim.claim_type | replace('_', ' ') | title }}</div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="info-item">
+                            <div class="info-label">Submitted</div>
+                            <div class="info-value">{{ claim.submitted_at.strftime('%B %d, %Y at %I:%M %p') }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Description</div>
+                    <div class="info-value">{{ claim.description }}</div>
+                </div>
+                {% if claim.officer_notes %}
+                <div class="alert alert-info mt-3 mb-0">
+                    <i class="bi bi-chat-left-text-fill me-2"></i>
+                    <strong>Officer Notes:</strong> {{ claim.officer_notes }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Status Timeline -->
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0">
+                <h5 class="card-title mb-0"><i class="bi bi-activity me-2 text-primary"></i>Status Timeline</h5>
+            </div>
+            <div class="card-body">
+                <div class="status-timeline">
+                    {% set all_statuses = ['submitted', 'under_review', 'approved', 'assigned', 'in_repair', 'ready', 'completed', 'closed'] %}
+                    {% set history_statuses = history | map(attribute='new_status') | list %}
+                    {% for s in all_statuses %}
+                    {% set is_done = s in history_statuses %}
+                    {% set is_current = s == claim.status %}
+                    <div class="timeline-step {% if is_done %}done{% elif is_current %}active{% endif %}">
+                        <div class="timeline-dot">
+                            {% if is_done %}<i class="bi bi-check-lg"></i>
+                            {% elif is_current %}<i class="bi bi-circle-fill"></i>
+                            {% else %}<i class="bi bi-circle"></i>{% endif %}
+                        </div>
+                        <div class="timeline-content">
+                            <div class="fw-semibold">{{ s | replace('_', ' ') | title }}</div>
+                            {% for h in history %}
+                            {% if h.new_status == s %}
+                            <div class="small text-muted">{{ h.changed_at.strftime('%b %d, %Y at %I:%M %p') }}</div>
+                            {% if h.notes %}<div class="small text-secondary fst-italic">{{ h.notes }}</div>{% endif %}
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                    <!-- Special case: rejected -->
+                    {% if claim.status == 'rejected' %}
+                    <div class="timeline-step done" style="--tl-color:#DC2626;">
+                        <div class="timeline-dot"><i class="bi bi-x-lg"></i></div>
+                        <div class="timeline-content">
+                            <div class="fw-semibold text-danger">Rejected</div>
+                            {% for h in history %}{% if h.new_status == 'rejected' %}
+                            <div class="small text-muted">{{ h.changed_at.strftime('%b %d, %Y') }}</div>
+                            {% endif %}{% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Attached Documents -->
+        {% if claim.documents.count() > 0 %}
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0">
+                <h5 class="card-title mb-0"><i class="bi bi-paperclip me-2 text-primary"></i>Attached Evidence</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    {% for doc in claim.documents %}
+                    <div class="col-sm-4 col-md-3">
+                        <a href="/uploads/{{ doc.file_path }}" target="_blank" class="doc-thumbnail">
+                            {% if doc.file_type in ['png', 'jpg', 'jpeg'] %}
+                            <img src="/uploads/{{ doc.file_path }}" alt="{{ doc.original_filename }}" class="img-fluid rounded">
+                            {% else %}
+                            <div class="doc-icon"><i class="bi bi-file-earmark-pdf text-danger fs-1"></i></div>
+                            {% endif %}
+                            <div class="small text-muted mt-1 text-truncate">{{ doc.original_filename }}</div>
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Service Assignment -->
+        {% if claim.service_assignment %}
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0">
+                <h5 class="card-title mb-0"><i class="bi bi-person-fill-gear me-2 text-primary"></i>Service Assignment</h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-sm-6">
+                        <div class="info-item">
+                            <div class="info-label">Technician</div>
+                            <div class="info-value">{{ claim.service_assignment.technician.full_name }}</div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="info-item">
+                            <div class="info-label">Service Center</div>
+                            <div class="info-value">{{ claim.service_assignment.service_center.name }}, {{ claim.service_assignment.service_center.city }}</div>
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="info-item">
+                            <div class="info-label">Due Date</div>
+                            <div class="info-value">{{ claim.service_assignment.due_date.strftime('%B %d, %Y') if claim.service_assignment.due_date else 'Not specified' }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                {% if claim.service_assignment.inspection %}
+                <hr>
+                <h6 class="fw-semibold mb-2"><i class="bi bi-search me-1"></i>Inspection Findings</h6>
+                <p class="small">{{ claim.service_assignment.inspection.findings or 'No details yet.' }}</p>
+                {% if claim.service_assignment.inspection.diagnosis %}
+                <p class="small"><strong>Diagnosis:</strong> {{ claim.service_assignment.inspection.diagnosis }}</p>
+                {% endif %}
+                {% if claim.service_assignment.inspection.recommended_action %}
+                <p class="small mb-0"><strong>Recommended Action:</strong>
+                    <span class="badge bg-info">{{ claim.service_assignment.inspection.recommended_action | replace('_', ' ') | title }}</span>
+                </p>
+                {% endif %}
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Feedback Form -->
+        {% if claim.status in ['completed', 'closed'] and not claim.feedback %}
+        <div class="card border-0 shadow-sm border-start border-success border-4">
+            <div class="card-body">
+                <h5 class="fw-semibold mb-3"><i class="bi bi-star-fill me-2 text-warning"></i>Share Your Experience</h5>
+                <a href="{{ url_for('warranty.feedback', claim_id=claim.id) }}" class="btn btn-success">
+                    Submit Feedback
+                </a>
+            </div>
+        </div>
+        {% elif claim.feedback %}
+        <div class="card border-0 shadow-sm">
+            <div class="card-body">
+                <h6 class="fw-semibold mb-2"><i class="bi bi-star-fill me-1 text-warning"></i>Your Feedback</h6>
+                <div class="text-warning mb-1">
+                    {% for i in range(claim.feedback.rating) %}<i class="bi bi-star-fill"></i>{% endfor %}
+                    {% for i in range(5 - claim.feedback.rating) %}<i class="bi bi-star text-muted"></i>{% endfor %}
+                </div>
+                {% if claim.feedback.comments %}
+                <p class="text-muted small mb-0">{{ claim.feedback.comments }}</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Right: Quick Info -->
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm mb-4">
+            <div class="card-header bg-white border-0">
+                <h5 class="card-title mb-0"><i class="bi bi-shield me-2 text-primary"></i>Warranty Info</h5>
+            </div>
+            <div class="card-body">
+                <div class="info-item mb-2">
+                    <div class="info-label">Status</div>
+                    <div><span class="badge bg-{{ 'success' if claim.warranty.status == 'active' else 'secondary' }}">{{ claim.warranty.status | title }}</span></div>
+                </div>
+                <div class="info-item mb-2">
+                    <div class="info-label">Valid Until</div>
+                    <div class="info-value">{{ claim.warranty.end_date.strftime('%B %d, %Y') }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

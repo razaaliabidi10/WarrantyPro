@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Back Button -->
+<div class="mb-3">
+    <a href="{{ url_for('officer.technicians') }}" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Back to Technicians
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-7 col-xl-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0 pt-4 px-4">
+                <h1 class="h5 fw-bold mb-1">
+                    <i class="bi bi-person-plus-fill text-primary me-2"></i>Add New Technician
+                </h1>
+                <p class="text-muted small mb-0">Creates a login account and technician profile.</p>
+            </div>
+            <div class="card-body p-4">
+                <form method="post" action="{{ url_for('officer.add_technician') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
+                        <input type="text" name="full_name" class="form-control"
+                               placeholder="e.g. Ahmed Khan" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Email Address <span class="text-danger">*</span></label>
+                        <input type="email" name="email" class="form-control"
+                               placeholder="technician@example.com" required>
+                        <div class="form-text">This will be their login email.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Password <span class="text-danger">*</span></label>
+                        <input type="password" name="password" class="form-control"
+                               placeholder="Min. 6 characters" required minlength="6">
+                        <div class="form-text">The technician can change this from their profile.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Service Center <span class="text-danger">*</span></label>
+                        <select name="service_center_id" class="form-select" required>
+                            <option value="">— Select Service Center —</option>
+                            {% for center in centers %}
+                            <option value="{{ center.id }}">{{ center.name }} ({{ center.city or 'N/A' }})</option>
+                            {% endfor %}
+                        </select>
+                        {% if not centers %}
+                        <div class="form-text text-warning">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            No service centers found. Ask the admin to add one first.
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Specialization</label>
+                        <input type="text" name="specialization" class="form-control"
+                               placeholder="e.g. Hardware, Software, Appliances">
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold">Phone Number</label>
+                        <input type="text" name="phone" class="form-control"
+                               placeholder="e.g. +92 300 0000000">
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary py-2">
+                            <i class="bi bi-person-plus-fill me-2"></i>Add Technician
+                        </button>
+                        <a href="{{ url_for('officer.technicians') }}" class="btn btn-outline-secondary">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

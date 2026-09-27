@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authenticating &bull; WarrantyPro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 min-h-screen flex items-center justify-center p-4">
+    <div class="text-center space-y-4">
+        <div class="inline-flex items-center justify-center">
+            <svg class="animate-spin h-10 w-10 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+        </div>
+        <p class="text-slate-700 font-semibold text-lg">Completing sign in...</p>
+        <p class="text-slate-400 text-sm">Please wait while we verify your session.</p>
+    </div>
+
+    <script>
+        const hash = window.location.hash.substring(1);
+        const params = new URLSearchParams(hash);
+        const token = params.get('access_token');
+        if (token) {
+            fetch('/api/set-session', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ access_token: token })
+            })
+            .then(res => res.json())
+            .then((data) => {
+                window.location.href = data.redirect_url || '/dashboard';
+            })
+            .catch(() => {
+                window.location.href = '/login';
+            });
+        } else {
+            window.location.href = '/login';
+        }
+    </script>
+</body>
+</html>

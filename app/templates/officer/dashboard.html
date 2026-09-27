@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header d-flex align-items-center gap-3 mb-4">
+    <div>
+        <h1 class="page-title mb-0">
+            <i class="bi bi-person-badge-fill text-officer me-2"></i>Officer Dashboard
+        </h1>
+        <p class="text-muted mb-0 small">Warranty request management &amp; oversight</p>
+    </div>
+    <div class="ms-auto d-flex gap-2">
+        {% if unread_count > 0 %}
+        <a href="{{ url_for('officer.notifications') }}" class="btn btn-warning btn-sm">
+            <i class="bi bi-bell-fill me-1"></i>{{ unread_count }} New
+        </a>
+        {% endif %}
+        <a href="{{ url_for('officer.requests') }}" class="btn btn-primary btn-sm">
+            <i class="bi bi-inbox-fill me-1"></i>Review Requests
+        </a>
+    </div>
+</div>
+
+<!-- KPI Cards Row -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-2">
+        <div class="card border-0 shadow-sm kpi-card h-100" style="border-left:4px solid #f59e0b!important;">
+            <div class="card-body text-center">
+                <div class="kpi-icon" style="background:rgba(245,158,11,0.15);color:#f59e0b;">
+                    <i class="bi bi-hourglass-split"></i>
+                </div>
+                <div class="kpi-number">{{ total_pending }}</div>
+                <div class="kpi-label">Pending Review</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="card border-0 shadow-sm kpi-card h-100" style="border-left:4px solid #22c55e!important;">
+            <div class="card-body text-center">
+                <div class="kpi-icon" style="background:rgba(34,197,94,0.15);color:#22c55e;">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+                <div class="kpi-number">{{ approved_today }}</div>
+                <div class="kpi-label">Approved Today</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="card border-0 shadow-sm kpi-card h-100" style="border-left:4px solid #6366f1!important;">
+            <div class="card-body text-center">
+                <div class="kpi-icon" style="background:rgba(99,102,241,0.15);color:#6366f1;">
+                    <i class="bi bi-person-fill-gear"></i>
+                </div>
+                <div class="kpi-number">{{ assigned_today }}</div>
+                <div class="kpi-label">Assigned Today</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="card border-0 shadow-sm kpi-card h-100" style="border-left:4px solid #0ea5e9!important;">
+            <div class="card-body text-center">
+                <div class="kpi-icon" style="background:rgba(14,165,233,0.15);color:#0ea5e9;">
+                    <i class="bi bi-bell-fill"></i>
+                </div>
+                <div class="kpi-number">{{ unread_count }}</div>
+                <div class="kpi-label">Unread Alerts</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-2">
+        <a href="{{ url_for('officer.technicians') }}" class="text-decoration-none">
+            <div class="card border-0 shadow-sm kpi-card h-100" style="border-left:4px solid #10b981!important;">
+                <div class="card-body text-center">
+                    <div class="kpi-icon" style="background:rgba(16,185,129,0.15);color:#10b981;">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                    <div class="kpi-number">{{ total_technicians }}</div>
+                    <div class="kpi-label">Technicians</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-2">
+        <div class="card border-0 shadow-sm kpi-card h-100" style="border-left:4px solid #8b5cf6!important;">
+            <div class="card-body text-center">
+                <div class="kpi-icon" style="background:rgba(139,92,246,0.15);color:#8b5cf6;">
+                    <i class="bi bi-person-check-fill"></i>
+                </div>
+                <div class="kpi-number">{{ available_technicians }}</div>
+                <div class="kpi-label">Available Now</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <!-- Pending Requests Queue -->
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-transparent border-0 d-flex align-items-center justify-content-between pt-3">
+                <h6 class="fw-semibold mb-0"><i class="bi bi-inbox-fill me-2 text-warning"></i>Pending Requests Queue</h6>
+                <a href="{{ url_for('officer.requests') }}" class="btn btn-outline-primary btn-sm">View All</a>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_pending %}
+                <div class="list-group list-group-flush rounded-3">
+                    {% for claim in recent_pending %}
+                    <a href="{{ url_for('officer.request_detail', claim_id=claim.id) }}"
+                       class="list-group-item list-group-item-action border-0 px-3 py-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="avatar-circle flex-shrink-0" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);">
+                                {{ claim.customer.full_name[0].upper() }}
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="fw-semibold text-truncate">{{ claim.customer.full_name }}</div>
+                                <div class="small text-muted text-truncate">
+                                    {{ claim.warranty.registration.product_model.product.brand }}
+                                    {{ claim.warranty.registration.product_model.model_name }}
+                                </div>
+                                <div class="small text-muted">
+                                    <i class="bi bi-clock me-1"></i>{{ claim.submitted_at.strftime('%b %d, %Y at %I:%M %p') }}
+                                </div>
+                            </div>
+                            <div class="text-end flex-shrink-0">
+                                <span class="badge bg-{{ 'warning' if claim.status == 'submitted' else 'info' }} text-dark">
+                                    {{ claim.status | replace('_', ' ') | title }}
+                                </span>
+                                <div class="small text-muted mt-1">Claim #{{ claim.id }}</div>
+                            </div>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5 text-muted">
+                    <i class="bi bi-check2-circle fs-1 d-block mb-2 text-success"></i>
+                    <p class="mb-0">All caught up! No pending requests.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column -->
+    <div class="col-lg-5">
+        <!-- Technician Board -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-transparent border-0 d-flex align-items-center justify-content-between pt-3">
+                <h6 class="fw-semibold mb-0"><i class="bi bi-people-fill me-2 text-primary"></i>Technician Board</h6>
+                <div class="d-flex gap-2">
+                    <span class="badge bg-success">{{ available_technicians }} Available</span>
+                    <span class="badge bg-secondary">{{ busy_technicians }} Busy</span>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_technicians %}
+                <div class="list-group list-group-flush rounded-3">
+                    {% for tech in recent_technicians %}
+                    <div class="list-group-item border-0 px-3 py-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold flex-shrink-0"
+                                 style="width:34px;height:34px;background:linear-gradient(135deg,#6366f1,#8b5cf6);font-size:0.85rem;">
+                                {{ tech.full_name[0].upper() }}
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <div class="fw-semibold small text-truncate">{{ tech.full_name }}</div>
+                                <div class="text-muted" style="font-size:0.75rem;">{{ tech.specialization or 'General' }} &middot; {{ tech.service_center.name }}</div>
+                            </div>
+                            <span class="badge {{ 'bg-success' if tech.is_available else 'bg-secondary' }} flex-shrink-0">
+                                {{ 'Free' if tech.is_available else 'Busy' }}
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4 text-muted">
+                    <i class="bi bi-person-fill-x fs-2 d-block mb-1"></i>
+                    <small>No technicians yet.</small>
+                </div>
+                {% endif %}
+            </div>
+            {% if total_technicians > 0 %}
+            <div class="card-footer bg-transparent border-0 text-center">
+                <a href="{{ url_for('officer.technicians') }}" class="btn btn-sm btn-outline-secondary">View All Technicians</a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Recent Notifications -->
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-transparent border-0 pt-3">
+                <h6 class="fw-semibold mb-0"><i class="bi bi-bell-fill me-2 text-warning"></i>Recent Notifications</h6>
+            </div>
+            <div class="card-body p-0">
+                {% if recent_notifications %}
+                <div class="list-group list-group-flush rounded-3">
+                    {% for n in recent_notifications %}
+                    <div class="list-group-item border-0 px-3 py-2 {% if not n.is_read %}bg-light{% endif %}">
+                        <div class="fw-semibold small">{{ n.title }}</div>
+                        <div class="text-muted" style="font-size:0.78rem;">{{ n.message | truncate(80) }}</div>
+                        <div class="text-muted" style="font-size:0.72rem;">{{ n.created_at.strftime('%b %d, %Y at %I:%M %p') }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4 text-muted"><i class="bi bi-bell-slash"></i> No notifications</div>
+                {% endif %}
+            </div>
+            {% if recent_notifications %}
+            <div class="card-footer bg-transparent border-0 text-center">
+                <a href="{{ url_for('officer.notifications') }}" class="btn btn-sm btn-outline-secondary">View All</a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Completed Assignments -->
+        {% if completed_assignments %}
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-transparent border-0 pt-3">
+                <h6 class="fw-semibold mb-0"><i class="bi bi-check-all me-2 text-success"></i>Recently Completed</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush rounded-3">
+                    {% for a in completed_assignments %}
+                    <div class="list-group-item border-0 px-3 py-2">
+                        <div class="fw-semibold small">Claim #{{ a.claim_id }} &mdash; {{ a.technician.full_name }}</div>
+                        <div class="text-muted" style="font-size:0.78rem;">
+                            Completed: {{ a.completed_at.strftime('%b %d, %Y') if a.completed_at else 'N/A' }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+{% endblock %}

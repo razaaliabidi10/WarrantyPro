@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Back Button -->
+<div class="mb-3">
+    <a href="javascript:history.back()" class="btn btn-sm btn-outline-secondary">
+        <i class="bi bi-arrow-left me-1"></i>Back
+    </a>
+</div>
+
+<div class="page-header">
+    <div>
+        <h1 class="page-title"><i class="bi bi-activity me-2 text-primary"></i>Activity Feed</h1>
+        <p class="text-muted mb-0">All system events — every action across all roles</p>
+    </div>
+</div>
+
+{% if notifications %}
+<div class="card border-0 shadow-sm">
+    <div class="list-group list-group-flush rounded-3">
+        {% for n in notifications %}
+        <div class="list-group-item border-0 px-4 py-3 {% if not n.is_read %}bg-primary bg-opacity-5{% endif %}">
+            <div class="d-flex align-items-start gap-3">
+                <div class="flex-shrink-0">
+                    {% if n.notification_type == 'claim_submitted' %}
+                        <div class="rounded-circle d-flex align-items-center justify-content-center"
+                             style="width:38px;height:38px;background:rgba(245,158,11,0.15);">
+                            <i class="bi bi-inbox-fill text-warning"></i>
+                        </div>
+                    {% elif n.notification_type == 'claim_approved' %}
+                        <div class="rounded-circle d-flex align-items-center justify-content-center"
+                             style="width:38px;height:38px;background:rgba(34,197,94,0.15);">
+                            <i class="bi bi-check-circle-fill text-success"></i>
+                        </div>
+                    {% elif n.notification_type == 'claim_rejected' %}
+                        <div class="rounded-circle d-flex align-items-center justify-content-center"
+                             style="width:38px;height:38px;background:rgba(239,68,68,0.15);">
+                            <i class="bi bi-x-circle-fill text-danger"></i>
+                        </div>
+                    {% elif n.notification_type == 'assigned' %}
+                        <div class="rounded-circle d-flex align-items-center justify-content-center"
+                             style="width:38px;height:38px;background:rgba(99,102,241,0.15);">
+                            <i class="bi bi-person-fill-gear" style="color:#6366f1;"></i>
+                        </div>
+                    {% elif n.notification_type == 'technician_update' %}
+                        <div class="rounded-circle d-flex align-items-center justify-content-center"
+                             style="width:38px;height:38px;background:rgba(14,165,233,0.15);">
+                            <i class="bi bi-wrench-adjustable text-info"></i>
+                        </div>
+                    {% elif n.notification_type == 'registration' %}
+                        <div class="rounded-circle d-flex align-items-center justify-content-center"
+                             style="width:38px;height:38px;background:rgba(16,185,129,0.15);">
+                            <i class="bi bi-shield-fill-check text-success"></i>
+                        </div>
+                    {% else %}
+                        <div class="rounded-circle d-flex align-items-center justify-content-center"
+                             style="width:38px;height:38px;background:rgba(100,116,139,0.15);">
+                            <i class="bi bi-bell-fill text-secondary"></i>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="flex-grow-1">
+                    <div class="fw-semibold {% if not n.is_read %}text-primary{% endif %}">
+                        {{ n.title }}
+                        {% if not n.is_read %}<span class="badge bg-primary ms-1" style="font-size:0.65rem;">NEW</span>{% endif %}
+                    </div>
+                    <p class="mb-1 text-muted small">{{ n.message }}</p>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted" style="font-size:0.75rem;">
+                            <i class="bi bi-clock me-1"></i>{{ n.created_at.strftime('%b %d, %Y at %I:%M %p') }}
+                        </span>
+                        {% if n.notification_type %}
+                        <span class="badge bg-secondary text-light" style="font-size:0.65rem;">
+                            {{ n.notification_type | replace('_',' ') | title }}
+                        </span>
+                        {% endif %}
+                        {% if n.link %}
+                        <a href="{{ n.link }}" class="btn btn-outline-primary py-0 px-2" style="font-size:0.72rem;">View →</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% else %}
+<div class="empty-state">
+    <i class="bi bi-activity"></i>
+    <h5>No activity yet</h5>
+    <p class="text-muted">System events will appear here as users interact with the platform.</p>
+</div>
+{% endif %}
+{% endblock %}
