@@ -27,7 +27,7 @@ An end-to-end digital warranty tracking and claims management platform featuring
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/razaaliabidi/WarrantyPro.git
+git clone https://github.com/razaaliabidi10/WarrantyPro.git
 cd WarrantyPro
 ```
 
