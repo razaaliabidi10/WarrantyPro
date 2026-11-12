@@ -23,55 +23,7 @@ An end-to-end digital warranty tracking and claims management platform featuring
 
 ---
 
-## 🚀 Setup & Installation Guide
-
-### 1. Clone the Repository
-```bash
-git clone https://github.com/razaaliabidi10/WarrantyPro.git
-cd WarrantyPro
-```
-
-### 2. Create and Activate Virtual Environment
-```bash
-# Windows
-python -m venv venv
-venv\Scripts\activate
-
-# macOS / Linux
-python3 -m venv venv
-source venv/bin/activate
-```
-
-### 3. Install Dependencies
-```bash
-pip install -r requirements.txt
-```
-
-### 4. Configure Environment Variables
-Copy the `.env.example` template to `.env` and fill in your Supabase project credentials and PostgreSQL database connection string:
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env`:
-```env
-SUPABASE_URL=your_supabase_project_url_here
-SUPABASE_KEY=your_supabase_anon_key_here
-SECRET_KEY=your_flask_secret_key_here
-DATABASE_URL=postgresql://username:password@localhost:5432/warranty_db
-```
-
-> **Note**: Never commit `.env` containing real keys to Git. It is automatically ignored by `.gitignore`.
-
-### 5. Launch the Application
-```bash
-python app.py
-```
-The application will start locally at **http://127.0.0.1:5003**.
-
----
-
+ 
 ## 👥 Default Roles & Test Portals
 
 | Role | Access Level | Portal Features |
